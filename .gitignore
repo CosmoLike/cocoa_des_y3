@@ -12,3 +12,4 @@ EXAMPLE_MCMC2_UOFA.sbatch
 EXAMPLE_MCMC2.yaml
 #EXAMPLE_POLY1_UOFA.sbatch
 #EXAMPLE_POLY1.yaml
+/interface/test

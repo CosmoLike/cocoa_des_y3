@@ -354,17 +354,17 @@ class _cosmolike_prototype_base(_DataSetLikelihood):
     ci.set_nuisance_ia(
       A1 = [
         params_values.get(p, None) for p in [
-          "DES_A1_"+str(i+1) for i in range(self.source_ntomo)
+          "JKDES_A1_"+str(i+1) for i in range(self.source_ntomo)
         ]
       ],
       A2 = [
         params_values.get(p, None) for p in [
-          "DES_A2_"+str(i+1) for i in range(self.source_ntomo)
+          "JKDES_A2_"+str(i+1) for i in range(self.source_ntomo)
         ]
       ],
       B_TA = [
         params_values.get(p, None) for p in [
-          "DES_BTA_"+str(i+1) for i in range(self.source_ntomo)
+          "JKDES_BTA_"+str(i+1) for i in range(self.source_ntomo)
         ]
       ],
     )

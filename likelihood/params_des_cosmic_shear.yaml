@@ -50,7 +50,7 @@
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
   # Intrinsic alignment
-  DES_A1_1:
+  JKDES_A1_1:
     prior:
       min: -5
       max:  5
@@ -60,7 +60,7 @@
       scale: 0.5
     proposal: 0.5
     latex: A_\mathrm{1-IA,DES}^1
-  DES_A1_2:
+  JKDES_A1_2:
     prior:
       min: -5
       max:  5
@@ -70,16 +70,16 @@
       scale: 0.5
     proposal: 0.5
     latex: A_\mathrm{1-IA,DES}^2
-  DES_A1_3:
+  JKDES_A1_3:
     value: 0
     latex: A_\mathrm{1-IA,DES}^3
-  DES_A1_4:
+  JKDES_A1_4:
     value: 0
     latex: A_\mathrm{1-IA,DES}^4
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
-  DES_A2_1:
+  JKDES_A2_1:
     prior:
       min: -5
       max:  5
@@ -88,8 +88,8 @@
       loc: -1.36
       scale: 0.5
     proposal: 0.5
-    latex: A_\mathrm{2-IA,DES}^1
-  DES_A2_2:
+    latex: A_\mathrm{2-IA}^1
+  JKDES_A2_2:
     prior:
       min: -5
       max:  5
@@ -98,17 +98,17 @@
       loc: -2.5
       scale: 0.5
     proposal: 0.5
-    latex: A_\mathrm{2-IA,DES}^2
-  DES_A2_3:
+    latex: A_\mathrm{2-IA}^2
+  JKDES_A2_3:
     value: 0
-    latex: A_\mathrm{2-IA,DES}^3
-  DES_A2_4:
+    latex: A_\mathrm{2-IA}^3
+  JKDES_A2_4:
     value: 0
-    latex: A_\mathrm{2-IA,DES}^4
+    latex: A_\mathrm{2-IA}^4
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
-  DES_BTA_1:
+  JKDES_BTA_1:
     prior:
       min: 0
       max: 2
@@ -117,16 +117,16 @@
       loc: 1
       scale: 0.15
     proposal: 0.1
-    latex: A_\mathrm{BTA-IA,DES}^1
-  DES_BTA_2:
+    latex: A_\mathrm{BTA-IA}^1
+  JKDES_BTA_2:
     value: 0
-    latex: A_\mathrm{BTA-IA,DES}^2
-  DES_BTA_3:
+    latex: A_\mathrm{BTA-IA}^2
+  JKDES_BTA_3:
     value: 0
-    latex: A_\mathrm{BTA-IA,DES}^3
-  DES_BTA_4:
+    latex: A_\mathrm{BTA-IA}^3
+  JKDES_BTA_4:
     value: 0
-    latex: A_\mathrm{BTA-IA,DES}^4
+    latex: A_\mathrm{BTA-IA}^4
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------

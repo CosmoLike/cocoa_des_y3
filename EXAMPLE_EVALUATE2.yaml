@@ -7,6 +7,7 @@ likelihood:
     path: ./external_modules/data/des_y3
     print_datavector: False
     print_datavector_file: "./projects/des_y3/chains/des_y3_theory_3x2pt.modelvector"
+    integration_accuracy: 0
 
 params:
   As_1e9:

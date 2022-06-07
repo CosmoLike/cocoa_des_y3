@@ -8,6 +8,7 @@ likelihood:
     data_file: DES_Y3.dataset
     print_datavector: False
     print_datavector_file: "./projects/des_y3/chains/des_y3_theory_cosmic_shear.modelvector"
+    integration_accuracy: 0
 
 params:
   As_1e9:
@@ -146,12 +147,12 @@ sampler:
       DES_M2: -0.0431752
       DES_M3: -0.034961
       DES_M4: -0.0158096
-      DES_A1_1: 0.606102
-      DES_A1_2: -1.51541
-      DES_A2_1: -1.7938938475734911 
-      DES_A2_2: -1.5448080290038528
-      DES_BTA_1: 0.8154011496506723
-      w0pwa: -0.9
-      w: -0.9
+      JKDES_A1_1: 0.606102
+      JKDES_A1_2: -1.51541
+      JKDES_A2_1: -1.7938938475734911 
+      JKDES_A2_2: -1.5448080290038528
+      JKDES_BTA_1: 0.8154011496506723
+      w0pwa: -1.0
+      w: -1.0
 
 output: ./projects/des_y3/chains/EXAMPLE_EVALUATE1
