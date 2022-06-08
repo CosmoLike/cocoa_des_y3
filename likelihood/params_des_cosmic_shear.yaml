@@ -169,16 +169,31 @@
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
-  # BARYON PCA
-  DES_BARYON_Q1:
+  JKDES_BARYON_Q1:
+    prior:
+      min: 0.0
+      max: 4.0
+    ref:
+      dist: norm
+      loc: 2.0
+      scale: 0.3
+    proposal: 0.3
+    latex: BQ_1
+  JKDES_BARYON_Q2:
+    prior:
+      min: -2.5
+      max: -2.5
+    ref:
+      dist: norm
+      loc: 0
+      scale: 0.3
+    proposal: 0.3
     value: 0.0
-    latex: BQ1_\mathrm{DES}^1
-  DES_BARYON_Q2:
+    latex: BQ_2
+  JKDES_BARYON_Q3:
     value: 0.0
-    latex: BQ2_\mathrm{DES}^2
-  DES_BARYON_Q3:
+    latex: BQ_3
+  JKDES_BARYON_Q4:
     value: 0.0
-    latex: BQ3_\mathrm{DES}^3
-  DES_BARYON_Q4:
-    value: 0.0
-    latex: BQ4_\mathrm{DES}^4
+    latex: BQ_4
+    

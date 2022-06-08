@@ -411,10 +411,10 @@ class _cosmolike_prototype_base(_DataSetLikelihood):
   # ------------------------------------------------------------------------
 
   def set_baryon_related(self, **params_values):
-    self.baryon_pcs_qs[0] = params_values.get("DES_BARYON_Q1", 0.0)
-    self.baryon_pcs_qs[1] = params_values.get("DES_BARYON_Q2", 0.0)
-    self.baryon_pcs_qs[2] = params_values.get("DES_BARYON_Q3", 0.0)
-    self.baryon_pcs_qs[3] = params_values.get("DES_BARYON_Q4", 0.0)
+    self.baryon_pcs_qs[0] = params_values.get("JKDES_BARYON_Q1", 0.0)
+    self.baryon_pcs_qs[1] = params_values.get("JKDES_BARYON_Q2", 0.0)
+    self.baryon_pcs_qs[2] = params_values.get("JKDES_BARYON_Q3", 0.0)
+    self.baryon_pcs_qs[3] = params_values.get("JKDES_BARYON_Q4", 0.0)
     
   def add_baryon_pcs_to_datavector(self, datavector):    
     return datavector[:] + self.baryon_pcs_qs[0]*self.baryon_pcs[:,0] \
