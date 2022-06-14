@@ -1287,6 +1287,7 @@ std::vector<double> cpp_compute_data_vector_masked()
       }
     }
   }
+
 /*
   start = start + like.Ntheta*tomo.clustering_Npowerspectra;
   if (like.gk == 1)
