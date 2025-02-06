@@ -5,10 +5,14 @@ stop_at_error: True
 likelihood:
   des_y3.des_cosmic_shear:
     path: ./external_modules/data/des_y3
-    data_file: DES_Y3_real.dataset
+    data_file: des_y3_real.dataset
     accuracyboost: 1.0
-    integration_accuracy: 1
+    integration_accuracy: 0
     kmax_boltzmann: 5.0
+    # 1 EE2, 2 Halofit
+    non_linear_emul: 2
+    IA_model: 0
+    IA_redshift_evolution: 3
 
 params:
   As_1e9:
@@ -325,9 +329,11 @@ sampler:
       DES_M4: -0.0158096
       DES_A1_1: 0.606102
       DES_A1_2: -1.51541
-      DES_A2_1: -1.7938938475734911 
+      #DES_A2_1: -1.7938938475734911 
+      DES_A2_1: 0.0
       DES_A2_2: -1.5448080290038528
-      DES_BTA_1: 0.8154011496506723
+      #DES_BTA_1: 0.8154011496506723
+      DES_BTA_1: 0.0
       w0pwa: -0.9
       w: -0.9
 
