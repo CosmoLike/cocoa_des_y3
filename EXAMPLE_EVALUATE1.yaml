@@ -5,8 +5,7 @@ stop_at_error: True
 likelihood:
   des_y3.des_cosmic_shear:
     path: ./external_modules/data/des_y3
-    #data_file: des_y3_real.dataset
-    data_file: DES_Y3_real.dataset
+    data_file: des_y3_real.dataset
     accuracyboost: 1.0
     integration_accuracy: 0
     kmax_boltzmann: 5.0
