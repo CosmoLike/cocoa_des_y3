@@ -439,6 +439,147 @@ PYBIND11_MODULE(cosmolike_des_y3_interface, m)
       py::arg("scenarios").none(false),
       py::return_value_policy::move
     );
+
+  // --------------------------------------------------------------------
+  // --------------------------------------------------------------------
+  // Theoretical Cosmolike Functions
+  // --------------------------------------------------------------------
+  // --------------------------------------------------------------------
+
+  m.def("get_binning_real_space",
+      &get_binning_real_space,
+      "Get real space binning (theta bins)"
+    );
+
+  m.def("xi_pm_tomo",
+      &cosmolike_interface::xi_pm_tomo_cpp,
+      "Compute cosmic shear (real space) data vector at all tomographic"
+      " and theta bins"
+    );
+
+  m.def("w_gammat_tomo",
+      &cosmolike_interface::w_gammat_tomo_cpp,
+      "Compute galaxy-galaxy lensing (real space) data vector at all"
+      " tomographic and theta bins",
+      py::return_value_policy::move
+    );
+
+  m.def("w_gg_tomo",
+      &cosmolike_interface::w_gg_tomo_cpp,
+      "Compute galaxy-galaxy clustering (real space) data vector at all"
+      " tomographic and theta bins",
+      py::return_value_policy::move
+    );
+
+  // --------------------------------------------------------------------
+  // --------------------------------------------------------------------
+
+  m.def("C_ss_tomo_limber",
+      py::overload_cast<const double, const int, const int>(
+        &cosmolike_interface::C_ss_tomo_limber_cpp
+      ),
+      "Compute shear-shear (fourier - limber) data vector at a single"
+      " tomographic bin and ell value",
+      py::arg("l").none(false).noconvert(),
+      py::arg("ni").none(false).noconvert(),
+      py::arg("nj").none(false).noconvert()
+    );
+
+  m.def("C_ss_tomo_limber",
+      py::overload_cast<arma::Col<double>>(
+        &cosmolike_interface::C_ss_tomo_limber_cpp
+      ),
+      "Compute shear-shear (fourier - limber) data vector at all tomographic"
+      " bins and many ell (vectorized)",
+      py::arg("l").none(false),
+      py::return_value_policy::move
+    );
+
+  m.def("int_for_C_ss_tomo_limber",
+      py::overload_cast<const double, const double, const int, const int>(
+        &cosmolike_interface::int_for_C_ss_tomo_limber_cpp
+      ),
+      "Compute integrand for shear-shear (fourier - limber) data vector"
+      " at a single tomographic bin and ell value",
+      py::arg("a").none(false).noconvert(),
+      py::arg("l").none(false).noconvert(),
+      py::arg("ni").none(false).noconvert(),
+      py::arg("ni").none(false).noconvert()
+    );
+
+  m.def("int_for_C_ss_tomo_limber",
+      py::overload_cast<arma::Col<double>, arma::Col<double>>(
+        &cosmolike_interface::int_for_C_ss_tomo_limber_cpp
+      ),
+      "Compute integrand shear-shear (fourier - limber) data vector at all" 
+      " tomographic bins and many scale factor and ell (vectorized)",
+      py::arg("a").none(false),
+      py::arg("l").none(false),
+      py::return_value_policy::move
+    );
+
+  // --------------------------------------------------------------------
+  // --------------------------------------------------------------------
+
+  m.def("C_gs_tomo_limber",
+      py::overload_cast<const double, const int, const int>(
+        &cosmolike_interface::C_gs_tomo_limber_cpp
+      ),
+      "Compute shear-position (fourier - limber) data vector at a single"
+      " tomographic bin and ell value",
+      py::arg("l").none(false).noconvert(),
+      py::arg("nl").none(false).noconvert(),
+      py::arg("ns").none(false).noconvert()
+    );
+
+  m.def("C_gs_tomo_limber",
+      py::overload_cast<arma::Col<double>>(
+        &cosmolike_interface::C_gs_tomo_limber_cpp
+      ),
+      "Compute shear-position (fourier - limber) data vector at all tomographic"
+      " bins and many ell (vectorized)",
+      py::arg("l").none(false),
+      py::return_value_policy::move
+    );
+
+  m.def("int_for_C_gs_tomo_limber",
+      py::overload_cast<const double, const double, const int, const int>(
+        &cosmolike_interface::int_for_C_gs_tomo_limber_cpp
+      ),
+      "Compute integrand for shear-position (fourier - limber) data vector"
+      " at a single tomographic bin and ell value",
+      py::arg("a").none(false).noconvert(),
+      py::arg("l").none(false).noconvert(),
+      py::arg("nl").none(false).noconvert(),
+      py::arg("ns").none(false).noconvert()
+    );
+
+  m.def("int_for_C_gs_tomo_limber",
+      py::overload_cast<arma::Col<double>, arma::Col<double>>(
+        &cosmolike_interface::int_for_C_gs_tomo_limber_cpp
+      ),
+      "Compute integrand shear-shear (fourier - limber) data vector at all" 
+      " tomographic bins and many scale factor and ell (vectorized)",
+      py::arg("a").none(false),
+      py::arg("l").none(false),
+      py::return_value_policy::move
+    );
+
+  // --------------------------------------------------------------------
+  // --------------------------------------------------------------------
+
+  m.def("C_gg_tomo",
+      py::overload_cast<arma::Col<double>>(
+        &cosmolike_interface::C_gg_tomo_cpp
+      ),
+      "Compute position-position (fourier - non-limber/limber) data vector"
+      " at all tomographic bins and many ell (vectorized)",
+      py::arg("l").none(false),
+      py::return_value_policy::move
+    );
+
+  // --------------------------------------------------------------------
+  // --------------------------------------------------------------------
 }
 
 // ----------------------------------------------------------------------------
