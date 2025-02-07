@@ -28,8 +28,15 @@ CLOG :=1
 # LINK PYBIND LIBRARY
 PYBIND := 1
 
+# LINK HDF5 LIBRARY
+#HDF5 := 1
+
 CSOURCES =
 OBJECTC =
+
+CPPSOURCES =
+OBJECTCPP =
+
 CFLAGS =  -std=c99 -I ${ROOTDIR}/.local/include/ -I ${ROOTDIR}/external_modules/code/
 CXXFLAGS = -std=c++17 -I ${ROOTDIR}/.local/include/ -I ${ROOTDIR}/external_modules/code/
 LDFLAGS = -L ${ROOTDIR}/.local/lib
@@ -40,8 +47,8 @@ else
 	COMMON_FLAGS += -O3 -fmax-errors=1 -ffast-math -fopenmp
 endif
 
-ifdef CPLUS_INCLUDE_PATH
-	CXXFLAGS += -I ${CPLUS_INCLUDE_PATH}
+ifdef IGNORE_CPP_SPDLOG_INSTALLATION
+	COMMON_FLAGS += -I ${GLOBAL_PACKAGES_INCLUDE}
 endif
 
 ifdef ARMA
@@ -146,7 +153,7 @@ OBJECTC += \
 		./radial_weights.o \
 		./redshift_spline.o \
 		./structs.o \
-		./pt_cfastpt.o \
+		./pt_cfastpt.o
 
 CPPSOURCES += \
 		${ROOTDIR}/external_modules/code/cosmolike/generic_interface.cpp \
@@ -157,13 +164,13 @@ OBJECTCPP += \
 		./cosmo2D_wrapper.o
 
 $(OBJECTC): $(CSOURCES)
-	$(CC) $(CFLAGS) -fPIC -DCOBAYA_SAMPLER -c $(CSOURCES)
+	$(CC) $(CFLAGS) -fPIC -c $(CSOURCES)
 
 $(OBJECTCPP): $(CPPSOURCES)
 	$(CXX) $(CXXFLAGS) -fPIC -c $(CPPSOURCES)
 
 cosmolike_des_y3_interface.so: $(OBJECTC) $(OBJECTCPP)
-	$(CXX) $(CXXFLAGS) -DCOBAYA_SAMPLER -shared -fPIC -o $@ $(OBJECTC) $(OBJECTCPP) interface.cpp  $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -DCOBAYA_SAMPLER -shared -fPIC -o $@ $(OBJECTC) $(OBJECTCPP) interface.cpp $(LDFLAGS)
 	@rm *.o
 
 clean:
