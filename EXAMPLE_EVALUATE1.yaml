@@ -7,7 +7,7 @@ likelihood:
     path: ./external_modules/data/des_y3
     data_file: des_y3_real.dataset
     accuracyboost: 1.0
-    integration_accuracy: 0
+    integration_accuracy: 1
     kmax_boltzmann: 5.0
     # 1 EE2, 2 Halofit
     non_linear_emul: 2

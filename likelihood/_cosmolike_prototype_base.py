@@ -55,8 +55,8 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       np.linspace(1080,2000,20)),axis=0) #CMB 6x2pt g_CMB
     self.z_interp_1D[0] = 0
 
-    self.z_interp_2D = np.linspace(0,2.0,120)
-    self.z_interp_2D = np.concatenate((self.z_interp_2D,np.linspace(2.0,10.1,50)),axis=0)
+    self.z_interp_2D = np.linspace(0, 2.0, 120)
+    self.z_interp_2D = np.concatenate((self.z_interp_2D,np.linspace(2.01, 10, 30)),axis=0)
     self.z_interp_2D[0] = 0
 
     self.len_z_interp_2D = len(self.z_interp_2D)
