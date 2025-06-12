@@ -2,6 +2,6 @@ from cobaya.likelihoods.des_y3._cosmolike_prototype_base import _cosmolike_proto
 import cosmolike_des_y3_interface as ci
 import numpy as np
 
-class des_cosmic_shear(_cosmolike_prototype_base):
+class combo_2x2pt(_cosmolike_prototype_base):
   def initialize(self):
-    super(des_cosmic_shear,self).initialize(probe="xi")
+    super(combo_2x2pt,self).initialize(probe="2x2pt")

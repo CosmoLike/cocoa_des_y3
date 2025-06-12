@@ -32,4 +32,4 @@ filename_baryon_pca: "./project/des_y3"
 print_datavector: False
 print_datavector_file: "./projects/des_y3/chains/des_y3_theory_2x2pt.modelvector"
 
-params: !defaults [params_des_lens, params_des_source]
+params: !defaults [params_lens, params_source]
