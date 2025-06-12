@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 import scipy
-from scipy.interpolate import interp1d
 import sys
 import time
 
@@ -12,7 +11,9 @@ from cobaya.likelihoods.base_classes import DataSetLikelihood
 from cobaya.log import LoggedError
 from getdist import IniFile
 
-import euclidemu2
+from scipy.interpolate import interp1d
+from scipy.interpolate import CubicSpline as _CubicSpline
+import euclidemu2 as ee2
 import math
 
 import cosmolike_des_y3_interface as ci
@@ -48,17 +49,30 @@ class _cosmolike_prototype_base(DataSetLikelihood):
 
     # ------------------------------------------------------------------------
  
-    self.z_interp_1D = np.linspace(0,2.0,1000)
-    self.z_interp_1D = np.concatenate((self.z_interp_1D,np.linspace(2.0,10.1,200)),axis=0)
-    self.z_interp_1D = np.concatenate((self.z_interp_1D,np.linspace(1080,2000,20)),axis=0) #CMB 6x2pt g_CMB
-    self.z_interp_1D[0] = 0
+    self.nz_interp_1d=int(500 + 250*self.accuracyboost)
+    self.nz_interp_2d=int(min(60 + 15*self.accuracyboost,150))
+    self.nk_interp_2d=int(500 + 250*self.accuracyboost)
 
-    self.z_interp_2D = np.linspace(0, 2.0, 120)
-    self.z_interp_2D = np.concatenate((self.z_interp_2D,np.linspace(2.01, 10, 30)),axis=0)
+    self.z_interp_1D = np.linspace(0, 3.0, max(100,int(0.80*self.nz_interp_2d)))
+    self.z_interp_1D = np.concatenate(
+      (self.z_interp_1D,
+      np.linspace(3.0,10.1,max(100,int(0.20*self.nz_interp_2d)))),
+      axis=0)
+    self.z_interp_1D = np.concatenate(
+      (self.z_interp_1D,
+      np.linspace(1080, 2000, 20)),
+      axis=0) #CMB 6x2pt g_CMB (possible in the future)
+    self.z_interp_1D[0] = 0
+    
+    self.z_interp_2D = np.linspace(0,3.0,max(10,int(0.85*self.nz_interp_2d)))
+    self.z_interp_2D = np.concatenate(
+      (self.z_interp_2D, 
+       np.linspace(3.01, 10, max(10,int(0.15*self.nz_interp_2d)))), 
+       axis=0)
     self.z_interp_2D[0] = 0
 
     self.len_z_interp_2D = len(self.z_interp_2D)
-    self.len_log10k_interp_2D = 1400
+    self.len_log10k_interp_2D = self.nk_interp_2d
     self.log10k_interp_2D = np.linspace(-4.2,2.0,self.len_log10k_interp_2D)
 
     # Cobaya wants k in 1/Mpc
@@ -86,11 +100,22 @@ class _cosmolike_prototype_base(DataSetLikelihood):
 
     ci.init_cosmo_runmode(is_linear=False)
 
-    ci.init_redshift_distributions_from_files(
-      lens_multihisto_file=self.lens_file, 
-      lens_ntomo=int(self.lens_ntomo), 
-      source_multihisto_file=self.source_file, 
-      source_ntomo=int(self.source_ntomo))  
+    if self.external_nz_modeling: 
+      (self.lens_nz, self.source_nz) = ci.read_redshift_distributions(
+          lens_multihisto_file=self.lens_file,
+          lens_ntomo=int(self.lens_ntomo), 
+          source_multihisto_file=self.source_file,
+          source_ntomo=int(self.source_ntomo)
+        ) 
+      ci.init_lens_sample_size(int(self.lens_ntomo))
+      ci.init_source_sample_size(int(self.source_ntomo))
+      ci.init_ntomo_powerspectra() # must be called after set_source/lens_size  
+    else:
+      ci.init_redshift_distributions_from_files(
+        lens_multihisto_file=self.lens_file,
+        lens_ntomo=int(self.lens_ntomo), 
+        source_multihisto_file=self.source_file,
+        source_ntomo=int(self.source_ntomo)) 
 
     ci.init_data_real(self.cov_file, self.mask_file, self.data_vector_file)
 
@@ -149,39 +174,19 @@ class _cosmolike_prototype_base(DataSetLikelihood):
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
 
-  def compute_logp(self, datavector):
-    return -0.5 * ci.compute_chi2(datavector)
-
-  # ------------------------------------------------------------------------
-  # ------------------------------------------------------------------------
-  # ------------------------------------------------------------------------
-
   def set_cosmo_related(self):
     h = self.provider.get_param("H0")/100.0
-
-    # Compute linear matter power spectrum
+    # Compute linear & non-linear matter power spectrum
     PKL = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
       nonlinear=False, extrap_kmax = self.extrap_kmax)
-
-    # Compute non-linear matter power spectrum
     PKNL = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
       nonlinear=True, extrap_kmax = self.extrap_kmax)
-
-    lnPL  = np.empty(self.len_pkz_interp_2D)
-    lnPNL = np.empty(self.len_pkz_interp_2D)
-
-    t1 = PKNL.logP(self.z_interp_2D, self.k_interp_2D).flatten()
-    t2 = PKL.logP(self.z_interp_2D, self.k_interp_2D).flatten()
-    
-    # Cosmolike wants k in h/Mpc
-    log10k_interp_2D = self.log10k_interp_2D - np.log10(h)
-
-    for i in range(self.len_z_interp_2D):
-      lnPL[i::self.len_z_interp_2D] = t2[i*self.len_k_interp_2D:(i+1)*self.len_k_interp_2D]
-    lnPL  += np.log((h**3))
+  
+    log10k_interp_2D = self.log10k_interp_2D - np.log10(h) # Cosmolike wants k in h/Mpc
+    lnPL = PKL.logP(self.z_interp_2D,self.k_interp_2D).flatten(order='F')+np.log(h**3)
 
     if self.non_linear_emul == 1:
-
+    
       params = {
         'Omm'  : self.provider.get_param("omegam"),
         'As'   : self.provider.get_param("As"),
@@ -193,35 +198,33 @@ class _cosmolike_prototype_base(DataSetLikelihood):
         'wa'   : 0.0
       }
 
-      kbt = np.power(10.0, np.linspace(-2.0589, 0.973, self.len_k_interp_2D))
-      kbt, tmp_bt = self.emulator.get_boost(params, self.z_interp_2D, kbt)
-      logkbt = np.log10(kbt)
+      nz = self.len_z_interp_2D
+      nk = self.len_k_interp_2D
+      kbt = 10**np.linspace(-2.0589, 0.973, nk)
+      #kbt, tmp_bt = ee2.get_boost(params, self.z_interp_2D, kbt)
+      kbt, tmp_bt = ee2.get_boost2(params, self.z_interp_2D, self.emulator, kbt)
+      bt = np.array([tmp_bt[i] for i in range(nz)])  
 
-      for i in range(self.len_z_interp_2D):    
-        interp = interp1d(logkbt, 
-            np.log(tmp_bt[i]), 
-            kind = 'linear', 
-            fill_value = 'extrapolate', 
-            assume_sorted = True
-          )
+      lnbt = interp1d(np.log10(kbt), 
+                      np.log(bt), 
+                      axis=1,
+                      kind='linear', 
+                      fill_value='extrapolate', 
+                      assume_sorted=True)(log10k_interp_2D)
+      lnbt[:,10**log10k_interp_2D < 8.73e-3] = 0.0
 
-        lnbt = interp(log10k_interp_2D)
-        lnbt[np.power(10,log10k_interp_2D) < 8.73e-3] = 0.0
-    
-        lnPNL[i::self.len_z_interp_2D]  = lnPL[i::self.len_z_interp_2D] + lnbt
-      
+      lnPNL=(lnPL.reshape(nz,nk,order='F')+lnbt).ravel(order='F')
+
     elif self.non_linear_emul == 2:
-
-      for i in range(self.len_z_interp_2D):
-        lnPNL[i::self.len_z_interp_2D]  = t1[i*self.len_k_interp_2D:(i+1)*self.len_k_interp_2D]  
-      lnPNL += np.log((h**3))      
-
+    
+      lnPNL = PKNL.logP(self.z_interp_2D,self.k_interp_2D).flatten(order='F')+np.log(h**3)   
+    
     else:
+    
       raise LoggedError(self.log, "non_linear_emul = %d is an invalid option", non_linear_emul)
 
-    G_growth = np.sqrt(PKL.P(self.z_interp_2D,0.0005)/PKL.P(0,0.0005))
-    G_growth = G_growth*(1 + self.z_interp_2D)    # do not merge these lines PI
-    G_growth = G_growth/G_growth[len(G_growth)-1] # do not merge these lines PII
+    G_growth = np.sqrt(PKL.P(self.z_interp_2D,0.0005)/PKL.P(0,0.0005))*(1+self.z_interp_2D)
+    G_growth /= G_growth[-1]
 
     ci.set_cosmology(
       omegam=self.provider.get_param("omegam"),
@@ -247,13 +250,37 @@ class _cosmolike_prototype_base(DataSetLikelihood):
         ]
       ]
     )
-    ci.set_nuisance_shear_photoz(
-      bias = [
-        params_values.get(p, None) for p in [
-          survey+"_DZ_S"+str(i+1) for i in range(self.source_ntomo)
+    if self.external_nz_modeling: 
+      # here we send n(z) at every point in the chain as the user may
+      # modify it using an external function (example: adding outliers)
+     
+      # to modify it
+      # (1) deep copy the numpy array (so we keep track of the fiducial
+      # (2) modify the copy
+      # (3) call set_source_sample
+      source_nz_local = self.source_nz.copy()
+
+      # insert mod function here <-
+      #source_nz_local = f(source_nz_local, nuisance parameters)
+
+      ci.set_source_sample(source_nz_local)
+
+      # user may choose to still add photo-z bias or not (here we ad)
+      ci.set_nuisance_shear_photoz(
+        bias = [
+          params_values.get(p, None) for p in [
+            survey+"_DZ_S"+str(i+1) for i in range(self.source_ntomo)
+          ]
         ]
-      ]
-    )
+      )
+    else:
+      ci.set_nuisance_shear_photoz(
+        bias = [
+          params_values.get(p, None) for p in [
+            survey+"_DZ_S"+str(i+1) for i in range(self.source_ntomo)
+          ]
+        ]
+      )
     ci.set_nuisance_ia(
       A1 = [
         params_values.get(p, None) for p in [
@@ -294,13 +321,37 @@ class _cosmolike_prototype_base(DataSetLikelihood):
         ]
       ]
     )
-    ci.set_nuisance_clustering_photoz(
-      bias = [
-        params_values.get(p, None) for p in [
-          survey+"_DZ_L"+str(i+1) for i in range(self.lens_ntomo)
+    if self.external_nz_modeling: 
+      # here we send n(z) at every point in the chain as the user may
+      # modify it using an external function (example: adding outliers)
+     
+      # to modify it
+      # (1) deep copy the numpy array (so we keep track of the fiducial
+      # (2) modify the copy
+      # (3) call set_source_sample
+      lens_nz_local = self.lens_nz.copy()
+
+      # insert mod function here <-
+      #lens_nz_local = f(lens_nz_local, nuisance parameters)
+
+      ci.set_lens_sample(lens_nz_local)
+
+      # user may choose to still add photo-z bias or not (here we ad)
+      ci.set_nuisance_clustering_photoz(
+        bias = [
+          params_values.get(p, None) for p in [
+            survey+"_DZ_L"+str(i+1) for i in range(self.lens_ntomo)
+          ]
         ]
-      ]
-    )
+      )
+    else:
+      ci.set_nuisance_clustering_photoz(
+        bias = [
+          params_values.get(p, None) for p in [
+            survey+"_DZ_L"+str(i+1) for i in range(self.lens_ntomo)
+          ]
+        ]
+      )
     ci.set_point_mass(
       PMV = [
         params_values.get(p, None) for p in [
@@ -312,3 +363,61 @@ class _cosmolike_prototype_base(DataSetLikelihood):
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
+
+  def compute_logp(self, datavector):
+    return -0.5 * ci.compute_chi2(datavector)
+
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+
+  def logp(self, **params_values):
+    datavector = self.internal_get_datavector(**params_values)
+    return self.compute_logp(datavector)
+
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+
+  def get_datavector(self, **params_values):        
+    datavector = self.internal_get_datavector(**params_values)
+    return np.array(datavector)
+
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+
+  def internal_get_datavector(self, **params_values):
+    self.set_cosmo_related()
+
+    if self.probe != "xi":
+        self.set_lens_related(**params_values)
+
+    self.set_source_related(**params_values)
+    
+    if self.create_baryon_pca:
+      pcs = ci.compute_baryon_pcas(scenarios = self.baryon_pca_sims)
+      np.savetxt(self.filename_baryon_pca, pcs)
+    
+    if self.use_baryon_pca:      
+      datavector = np.array(
+        ci.compute_data_vector_masked_with_baryon_pcs(
+          Q = [
+                params_values.get(p, None) for p in [
+                  survey+"_BARYON_Q"+str(i+1) for i in range(self.npcs)
+                ]
+              ]
+        )
+      )
+    else:  
+      datavector = np.array(ci.compute_data_vector_masked())
+    
+    if self.print_datavector:
+      size = len(datavector)
+      out = np.zeros(shape=(size, 2))
+      out[:,0] = np.arange(0, size)
+      out[:,1] = datavector
+      fmt = '%d', '%1.8e'
+      np.savetxt(self.print_datavector_file, out, fmt = fmt)
+
+    return datavector
