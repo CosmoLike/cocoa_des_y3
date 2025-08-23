@@ -207,6 +207,6 @@ test: $(OBJECTC) $(CSOURCES) $(OBJECTCPP) interface.cpp
 	$(CXX) $(CXXFLAGS) -DCOBAYA_SAMPLER -fPIC -o $@ \
 		$(OBJECTC) $(OBJECTCPP) interface.cpp \
 		$(LDFLAGS) $(LDLIBS) 
-		
+
 clean:
-	@rm -rf cosmolike_des_y3_interface.so cosmolike_des_y3_interface.so.dSYM  *.o
+	@rm -rf test cosmolike_des_y3_interface.so cosmolike_des_y3_interface.so.dSYM  *.o
