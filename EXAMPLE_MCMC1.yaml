@@ -8,11 +8,13 @@ likelihood:
     data_file: des_y3_real.dataset
     accuracyboost: 1.0
     integration_accuracy: 0
+    lmax: 50000 # lmax computed for real space correlation function
     kmax_boltzmann: 5.0
     # 1 EE2, 2 Halofit
     non_linear_emul: 2
     IA_model: 1
     IA_redshift_evolution: 3
+    use_baryon_pca: False
 
 params:
   As_1e9:
@@ -300,7 +302,8 @@ theory:
       nnu: 3.046
       dark_energy_model: ppf
       accurate_massive_neutrino_transfers: false
-      k_per_logint: 20
+      k_per_logint: 10
+      kmax: 5
 
 sampler:
   mcmc:
