@@ -3,7 +3,7 @@ debug: False
 stop_at_error: False
 
 likelihood:
-  des_y3.des_cosmic_shear:
+  des_y3.cosmic_shear:
     path: ./external_modules/data/des_y3
     data_file: des_y3_real.dataset
     accuracyboost: 1.0

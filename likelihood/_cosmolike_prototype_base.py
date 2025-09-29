@@ -56,9 +56,8 @@ class _cosmolike_prototype_base(DataSetLikelihood):
 
     tmp=int(min(120 + 20*self.accuracyboost,250))
     self.z_interp_2D = np.concatenate((np.linspace(0,3.0,max(50,int(0.75*tmp))), 
-                                       np.linspace(3.01,50.1,max(30,int(0.25*tmp)))),axis=0)
+                                       np.linspace(3.01,50.0,max(30,int(0.25*tmp)))),axis=0)
     self.len_z_interp_2D = len(self.z_interp_2D)
-    
     self.log10k_interp_2D = np.linspace(-4.99,2.0,int(1250+250*self.accuracyboost))
     self.len_log10k_interp_2D = len(self.log10k_interp_2D)
     # ------------------------------------------------------------------------
@@ -91,8 +90,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
             lens_multihisto_file=self.lens_file,
             lens_ntomo=int(self.lens_ntomo), 
             source_multihisto_file=self.source_file,
-            source_ntomo=int(self.source_ntomo)
-          ) 
+            source_ntomo=int(self.source_ntomo)) 
         ci.init_lens_sample_size(int(self.lens_ntomo))
         ci.init_source_sample_size(int(self.source_ntomo))
         ci.init_ntomo_powerspectra() # must be called after set_source/lens_size  
@@ -172,26 +170,27 @@ class _cosmolike_prototype_base(DataSetLikelihood):
           } # in Mpc
         }     
     else:
-      return {
-        "As": None,
-        "H0": None,
-        "omegam": None,
-        "omegab": None,
-        "mnu": None,
-        "w": None,
-        "Pk_interpolator": {
-          "z": self.z_interp_2D,
-          "k_max": self.kmax_boltzmann * self.accuracyboost,
-          "nonlinear": (True,False),
-          "vars_pairs": ([("delta_tot", "delta_tot")])
-        },
-        "comoving_radial_distance": {
-          "z": self.z_interp_1D 
-        }, # in Mpc
-        "Cl": { # DONT REMOVE THIS - SOME WEIRD BEHAVIOR IN CAMB WITHOUT WANTS_CL
-          'tt': 0
-        }
-      }
+      res = {}
+      if self.non_linear_emul == 1:
+        res.update({"wa": None, "w": None, "mnu": None, "omegab": None})
+      res.update({
+          "As": None,
+          "H0": None,
+          "omegam": None,          
+          "Pk_interpolator": {
+            "z": self.z_interp_2D,
+            "k_max": self.kmax_boltzmann * self.accuracyboost,
+            "nonlinear": (True,False),
+            "vars_pairs": ([("delta_tot", "delta_tot")])
+          },
+          "comoving_radial_distance": {
+            "z": self.z_interp_1D 
+          }, # in Mpc
+          "Cl": { # DONT REMOVE THIS - SOME WEIRD BEHAVIOR IN CAMB WITHOUT WANTS_CL
+            'tt': 0
+          }
+        })
+      return res
 
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
@@ -215,23 +214,32 @@ class _cosmolike_prototype_base(DataSetLikelihood):
           'h'    : h,
           'mnu'  : self.provider.get_param("mnu"), 
           'w'    : self.provider.get_param("w"),
-          'wa'   : 0.0
+          'wa'   : self.provider.get_param("wa"),
         }
+        # Euclid Emulator only works on z<10.0
         kbt, tmp_bt = ee2.get_boost2(params, 
-                                     self.z_interp_2D, 
+                                     self.z_interp_2D[self.z_interp_2D < 10.0], 
                                      self.emulator, 
                                      10**np.linspace(-2.0589,0.973,self.len_log10k_interp_2D))
-        bt = np.array([tmp_bt[i] for i in range(self.len_z_interp_2D)],dtype='float64')  
-        lnbt = interp1d(np.log10(kbt), 
-                        np.log(bt), 
-                        axis=1,
-                        kind='linear', 
-                        fill_value='extrapolate', 
-                        assume_sorted=True)(self.log10k_interp_2D-np.log10(h)) #h/Mpc
-        lnbt[:,10**(self.log10k_interp_2D-np.log10(h)) < 8.73e-3] = 0.0
-        lnPNL=(lnPL.reshape(self.len_z_interp_2D, 
-                            self.len_log10k_interp_2D, 
-                            order='F') + lnbt).ravel(order='F')
+        bt = np.array(tmp_bt, dtype='float64')
+        tmp = interp1d(np.log10(kbt), 
+                       np.log(bt), 
+                       axis=1,
+                       kind='linear', 
+                       fill_value='extrapolate', 
+                       assume_sorted=True)(self.log10k_interp_2D-np.log10(h)) #h/Mpc
+        tmp[:,10**(self.log10k_interp_2D-np.log10(h)) < 8.73e-3] = 0.0
+        lnbt = np.zeros((self.len_z_interp_2D, self.len_log10k_interp_2D))
+        lnbt[self.z_interp_2D < 10.0, :] = tmp
+        # Use Halofit first that works on all redshifts
+        lnPNL = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
+          nonlinear=True,extrap_kmax=2.5e2*self.accuracyboost).logP(self.z_interp_2D,
+          np.power(10.0,self.log10k_interp_2D)).flatten(order='F')+np.log(h**3) 
+        # on z < 10.0, replace it with EE2
+        lnPNL = np.where(
+          (self.z_interp_2D<10)[:,None], 
+          lnPL.reshape(self.len_z_interp_2D,self.len_log10k_interp_2D,order='F') + lnbt, 
+          lnPNL.reshape(self.len_z_interp_2D,self.len_log10k_interp_2D,order='F')).ravel(order='F')
       elif self.non_linear_emul == 2:
         lnPNL = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
           nonlinear=True, extrap_kmax =2.5e2*self.accuracyboost).logP(self.z_interp_2D,
