@@ -1,5 +1,5 @@
 timing: True
-debug: True
+debug: False
 stop_at_error: True
 
 likelihood:
@@ -18,7 +18,7 @@ likelihood:
     IA_model: 1
     IA_redshift_evolution: 3
     use_baryon_pca: False
-
+    debug: false
 params:
   As_1e9:
     prior:
