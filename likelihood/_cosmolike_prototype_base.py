@@ -24,27 +24,16 @@ class _cosmolike_prototype_base(DataSetLikelihood):
 
   def initialize(self, probe):
     ini = IniFile(os.path.normpath(os.path.join(self.path, self.data_file)))
-    
     self.probe = probe
-
     self.data_vector_file = ini.relativeFileName('data_file')
-
     self.cov_file = ini.relativeFileName('cov_file')
-
     self.mask_file = ini.relativeFileName('mask_file')
-
     self.lens_file = ini.relativeFileName('nz_lens_file')
-
     self.source_file = ini.relativeFileName('nz_source_file')
-
     self.lens_ntomo = ini.int("lens_ntomo") #5
-
     self.source_ntomo = ini.int("source_ntomo") #4
-
     self.ntheta = ini.int("n_theta")
-
     self.theta_min_arcmin = ini.float("theta_min_arcmin")
-
     self.theta_max_arcmin = ini.float("theta_max_arcmin")
 
     # ------------------------------------------------------------------------   
@@ -63,10 +52,10 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     # ------------------------------------------------------------------------
 
     ci.initial_setup()
-    
     ci.init_probes(possible_probes=self.probe)
-
-    ci.init_binning(int(self.ntheta), self.theta_min_arcmin, self.theta_max_arcmin)
+    ci.init_binning(int(self.ntheta), 
+                    self.theta_min_arcmin, 
+                    self.theta_max_arcmin)
 
     if self.use_emulator:
       ci.init_redshift_distributions_from_files(
@@ -79,10 +68,8 @@ class _cosmolike_prototype_base(DataSetLikelihood):
                              integration_accuracy=-1) # seems enough to compute PM
     else:
       ci.init_ntable_lmax(lmax=int(self.lmax))
-      
       ci.init_accuracy_boost(accuracy_boost=self.accuracyboost, 
                              integration_accuracy=int(self.integration_accuracy))
-
       ci.init_cosmo_runmode(is_linear=False)
 
       if self.external_nz_modeling: 
@@ -102,10 +89,8 @@ class _cosmolike_prototype_base(DataSetLikelihood):
           source_ntomo=int(self.source_ntomo))  
 
       ci.init_data_real(self.cov_file, self.mask_file, self.data_vector_file)
-
       ci.init_IA(ia_model = int(self.IA_model), 
                  ia_redshift_evolution = int(self.IA_redshift_evolution))
-
       if self.probe != "xi":
         # (b1, b2, bs2, b3, bmag). 0 = one amplitude per bin
         ci.init_bias(bias_model=self.bias_model)
@@ -176,7 +161,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       res.update({
           "As": None,
           "H0": None,
-          "omegam": None,          
+          "omegam": None,
           "Pk_interpolator": {
             "z": self.z_interp_2D,
             "k_max": self.kmax_boltzmann * self.accuracyboost,
@@ -184,7 +169,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
             "vars_pairs": ([("delta_tot", "delta_tot")])
           },
           "comoving_radial_distance": {
-            "z": self.z_interp_1D 
+            "z": self.z_interp_1D
           }, # in Mpc
           "Cl": { # DONT REMOVE THIS - SOME WEIRD BEHAVIOR IN CAMB WITHOUT WANTS_CL
             'tt': 0

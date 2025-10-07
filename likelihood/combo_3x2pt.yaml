@@ -3,7 +3,7 @@ data_file: DES_Y3.dataset
 accuracyboost: 1.0
 integration_accuracy: 0
 lmax: 50000 
-kmax_boltzmann: 5.0
+kmax_boltzmann: 7.5
 speed: 1
 non_linear_emul: 2
 # IA REDSHIFT EVOLUTION: 0 = NO_IA (AMPLITUDES SET TO ZERO), 
