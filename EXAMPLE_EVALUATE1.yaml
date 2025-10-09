@@ -1,5 +1,5 @@
 timing: True
-debug: True
+debug: False
 stop_at_error: True
 
 likelihood:
@@ -15,7 +15,10 @@ likelihood:
     IA_model: 1
     IA_redshift_evolution: 3
     use_baryon_pca: False
-
+    debug: false
+    create_baryon_pca: false
+    baryon_pca_select_sims: "antilles-2-99/antilles-101-378/antilles-380-400"
+    filename_baryon_pca: "./projects/lsst_y1/chains/pca.txt"
 params:
   As_1e9:
     prior:
@@ -105,7 +108,7 @@ params:
     value: 0.0697186
     latex: \tau_\mathrm{reio}
   # ----------------------------------------------------------------------------
-  # DES-Y3 CS nuissance parameter Start
+  # DES-Y3 CS nuisance parameter start
   # ----------------------------------------------------------------------------
   # ----------------------------------------------------------------------------
   # DES-Y3 SOURCE VALUES FROM TABLE I, PAGE 11 of 2105.13549
@@ -248,7 +251,7 @@ params:
       scale: 0.15
     proposal: 0.1
   # ----------------------------------------------------------------------------
-  # DES-Y3 CS nuissance parameter End
+  # DES-Y3 CS nuisance parameters End
   # ----------------------------------------------------------------------------
   # ----------------------------------------------------------------------------
   # -------------------------- DERIVED PARAMETERS ------------------------------

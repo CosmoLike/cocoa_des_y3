@@ -24,27 +24,16 @@ class _cosmolike_prototype_base(DataSetLikelihood):
 
   def initialize(self, probe):
     ini = IniFile(os.path.normpath(os.path.join(self.path, self.data_file)))
-    
     self.probe = probe
-
     self.data_vector_file = ini.relativeFileName('data_file')
-
     self.cov_file = ini.relativeFileName('cov_file')
-
     self.mask_file = ini.relativeFileName('mask_file')
-
     self.lens_file = ini.relativeFileName('nz_lens_file')
-
     self.source_file = ini.relativeFileName('nz_source_file')
-
     self.lens_ntomo = ini.int("lens_ntomo") #5
-
     self.source_ntomo = ini.int("source_ntomo") #4
-
     self.ntheta = ini.int("n_theta")
-
     self.theta_min_arcmin = ini.float("theta_min_arcmin")
-
     self.theta_max_arcmin = ini.float("theta_max_arcmin")
 
     # ------------------------------------------------------------------------   
@@ -63,11 +52,14 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     # ------------------------------------------------------------------------
 
     ci.initial_setup()
-    
     ci.init_probes(possible_probes=self.probe)
+    ci.init_binning(self.ntheta, self.theta_min_arcmin, self.theta_max_arcmin)
 
-    ci.init_binning(int(self.ntheta), self.theta_min_arcmin, self.theta_max_arcmin)
-
+    if self.debug:
+      ci.set_log_level_debug()
+    else:
+      ci.set_log_level_info()
+      
     if self.use_emulator:
       ci.init_redshift_distributions_from_files(
           lens_multihisto_file=self.lens_file,
@@ -79,10 +71,8 @@ class _cosmolike_prototype_base(DataSetLikelihood):
                              integration_accuracy=-1) # seems enough to compute PM
     else:
       ci.init_ntable_lmax(lmax=int(self.lmax))
-      
       ci.init_accuracy_boost(accuracy_boost=self.accuracyboost, 
                              integration_accuracy=int(self.integration_accuracy))
-
       ci.init_cosmo_runmode(is_linear=False)
 
       if self.external_nz_modeling: 
@@ -102,27 +92,30 @@ class _cosmolike_prototype_base(DataSetLikelihood):
           source_ntomo=int(self.source_ntomo))  
 
       ci.init_data_real(self.cov_file, self.mask_file, self.data_vector_file)
-
       ci.init_IA(ia_model = int(self.IA_model), 
                  ia_redshift_evolution = int(self.IA_redshift_evolution))
-
-      if self.probe != "xi":
+      if self.probe not in ("xi", "3x2pt_ss_sk_sk", "2x2pt_ss_sk"):
         # (b1, b2, bs2, b3, bmag). 0 = one amplitude per bin
         ci.init_bias(bias_model=self.bias_model)
 
-      if self.create_baryon_pca:
-        self.use_baryon_pca = False
       if self.non_linear_emul == 1:
         self.emulator = ee2.PyEuclidEmulator()
 
+      if self.create_baryon_pca:
+        self.use_baryon_pca = False
+        self.allsims = ini.relativeFileName('all_sims_hdf5_file')
+      else:
+        if self.add_baryons_on_dv:
+          sim = self.which_bsims_add_on_dv
+          self.allsims = ini.relativeFileName('all_sims_hdf5_file')
+          ci.init_baryons_contamination(sim = sim, allsims=allsims)
+
     if self.use_baryon_pca:
       baryon_pca_file = ini.relativeFileName('baryon_pca_file')
-      self.baryon_pcs = np.loadtxt(baryon_pca_file)
-      ci.set_baryon_pcs(eigenvectors=self.baryon_pcs)
+      self.npcs = 4
+      ci.set_baryon_pcs(eigenvectors = np.loadtxt(baryon_pca_file))
       self.log.info('use_baryon_pca = True')
       self.log.info('baryon_pca_file = %s loaded', baryon_pca_file)
-      self.npcs = 4
-      self.baryon_pcs_qs = np.zeros(self.npcs)
     else:
       self.log.info('use_baryon_pca = False')
 
@@ -176,7 +169,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       res.update({
           "As": None,
           "H0": None,
-          "omegam": None,          
+          "omegam": None,
           "Pk_interpolator": {
             "z": self.z_interp_2D,
             "k_max": self.kmax_boltzmann * self.accuracyboost,
@@ -184,7 +177,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
             "vars_pairs": ([("delta_tot", "delta_tot")])
           },
           "comoving_radial_distance": {
-            "z": self.z_interp_1D 
+            "z": self.z_interp_1D
           }, # in Mpc
           "Cl": { # DONT REMOVE THIS - SOME WEIRD BEHAVIOR IN CAMB WITHOUT WANTS_CL
             'tt': 0
@@ -494,8 +487,9 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     self.set_source_related(**params)
     
     if self.create_baryon_pca:
-      pcs = ci.compute_baryon_pcas(scenarios=self.baryon_pca_sims)
+      pcs = ci.compute_baryon_pcas(scenarios=self.baryon_pca_select_sims, allsims=self.allsims)
       np.savetxt(self.filename_baryon_pca, pcs)
+      datavector = ci.compute_data_vector_masked()
     elif self.use_baryon_pca: 
       Q = [params.get(p,0) for p in [survey+"_BARYON_Q"+str(i+1) for i in range(self.npcs)]]     
       datavector = ci.compute_data_vector_masked_with_baryon_pcs(Q=Q)
