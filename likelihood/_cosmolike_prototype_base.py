@@ -53,9 +53,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
 
     ci.initial_setup()
     ci.init_probes(possible_probes=self.probe)
-    ci.init_binning(int(self.ntheta), 
-                    self.theta_min_arcmin, 
-                    self.theta_max_arcmin)
+    ci.init_binning(self.ntheta, self.theta_min_arcmin, self.theta_max_arcmin)
 
     if self.debug:
       ci.set_log_level_debug()
@@ -96,23 +94,28 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       ci.init_data_real(self.cov_file, self.mask_file, self.data_vector_file)
       ci.init_IA(ia_model = int(self.IA_model), 
                  ia_redshift_evolution = int(self.IA_redshift_evolution))
-      if self.probe != "xi":
+      if self.probe not in ("xi", "3x2pt_ss_sk_sk", "2x2pt_ss_sk"):
         # (b1, b2, bs2, b3, bmag). 0 = one amplitude per bin
         ci.init_bias(bias_model=self.bias_model)
 
-      if self.create_baryon_pca:
-        self.use_baryon_pca = False
       if self.non_linear_emul == 1:
         self.emulator = ee2.PyEuclidEmulator()
 
+      if self.create_baryon_pca:
+        self.use_baryon_pca = False
+        self.allsims = ini.relativeFileName('all_sims_hdf5_file')
+      else:
+        if self.add_baryons_on_dv:
+          sim = self.which_bsims_add_on_dv
+          self.allsims = ini.relativeFileName('all_sims_hdf5_file')
+          ci.init_baryons_contamination(sim = sim, allsims=allsims)
+
     if self.use_baryon_pca:
       baryon_pca_file = ini.relativeFileName('baryon_pca_file')
-      self.baryon_pcs = np.loadtxt(baryon_pca_file)
-      ci.set_baryon_pcs(eigenvectors=self.baryon_pcs)
+      self.npcs = 4
+      ci.set_baryon_pcs(eigenvectors = np.loadtxt(baryon_pca_file))
       self.log.info('use_baryon_pca = True')
       self.log.info('baryon_pca_file = %s loaded', baryon_pca_file)
-      self.npcs = 4
-      self.baryon_pcs_qs = np.zeros(self.npcs)
     else:
       self.log.info('use_baryon_pca = False')
 
@@ -484,8 +487,9 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     self.set_source_related(**params)
     
     if self.create_baryon_pca:
-      pcs = ci.compute_baryon_pcas(scenarios=self.baryon_pca_sims)
+      pcs = ci.compute_baryon_pcas(scenarios=self.baryon_pca_select_sims, allsims=self.allsims)
       np.savetxt(self.filename_baryon_pca, pcs)
+      datavector = ci.compute_data_vector_masked()
     elif self.use_baryon_pca: 
       Q = [params.get(p,0) for p in [survey+"_BARYON_Q"+str(i+1) for i in range(self.npcs)]]     
       datavector = ci.compute_data_vector_masked_with_baryon_pcs(Q=Q)

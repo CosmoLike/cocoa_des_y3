@@ -9,3 +9,4 @@ n_theta = 20
 theta_min_arcmin = 2.5
 theta_max_arcmin = 250.
 #baryon_pca_file = y1pca.txt
+all_sims_hdf5_file = baryons_logPkR.h5
