@@ -147,9 +147,6 @@ all:  shared
 shared: cosmolike_des_y3_interface.so
 
 CSOURCES += \
-		${ROOTDIR}/external_modules/code/cfftlog/cfftlog.c \
-		${ROOTDIR}/external_modules/code/cfftlog/utils_complex.c \
-		${ROOTDIR}/external_modules/code/cfftlog/utils.c \
 		${ROOTDIR}/external_modules/code/cfastpt/cfastpt.c \
 		${ROOTDIR}/external_modules/code/cfastpt/utils_complex_cfastpt.c \
 		${ROOTDIR}/external_modules/code/cfastpt/utils_cfastpt.c \
@@ -158,6 +155,7 @@ CSOURCES += \
 		${ROOTDIR}/external_modules/code/cosmolike/baryons.c \
 		${ROOTDIR}/external_modules/code/cosmolike/cosmo3D.c \
 		${ROOTDIR}/external_modules/code/cosmolike/cosmo2D.c \
+		${ROOTDIR}/external_modules/code/cosmolike/cosmo2D_scuts.c \
 		${ROOTDIR}/external_modules/code/cosmolike/halo.c \
 		${ROOTDIR}/external_modules/code/cosmolike/IA.c \
 		${ROOTDIR}/external_modules/code/cosmolike/radial_weights.c \
@@ -166,9 +164,6 @@ CSOURCES += \
 		${ROOTDIR}/external_modules/code/cosmolike/pt_cfastpt.c \
 
 OBJECTC += \
-		./cfftlog.o \
-		./utils_complex.o \
-		./utils.o \
 		./cfastpt.o \
 		./utils_complex_cfastpt.o \
 		./utils_cfastpt.o \
@@ -177,6 +172,7 @@ OBJECTC += \
 		./bias.o \
 		./cosmo3D.o \
 		./cosmo2D.o \
+		./cosmo2D_scuts.o \
 		./halo.o \
 		./IA.o \
 		./radial_weights.o \
@@ -186,11 +182,13 @@ OBJECTC += \
 
 CPPSOURCES += \
 		${ROOTDIR}/external_modules/code/cosmolike/generic_interface.cpp \
-		${ROOTDIR}/external_modules/code/cosmolike/cosmo2D_wrapper.cpp
-
+		${ROOTDIR}/external_modules/code/cosmolike/cosmo2D_wrapper.cpp \
+		${ROOTDIR}/external_modules/code/cosmolike/cosmo2D_scuts_wrapper.cpp
+ 
 OBJECTCPP += \
 		./generic_interface.o \
-		./cosmo2D_wrapper.o
+		./cosmo2D_wrapper.o \
+		./cosmo2D_scuts_wrapper.o
 
 $(OBJECTC): $(CSOURCES)
 	$(CC) $(CFLAGS) -fPIC -c $(CSOURCES)
