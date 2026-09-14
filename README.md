@@ -212,7 +212,102 @@ Now, users must follow all the steps below.
 
         mpirun -n 4 --oversubscribe \
           cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_MCMC1.yaml -r
+
+> [!Note]
+> The flag `--mca btl vader,tcp,self` also works unchanged on multi-node runs: 
+> Open MPI uses `vader` (shared memory) within a node and `tcp` between nodes automatically.
+
+The `Nautilus`, `Minimizer`, `Profile`, and `Emcee` scripts below contain an internally 
+defined `yaml_string` that specifies priors, 
+likelihoods, and the theory code, all following Cobaya Conventions.
+
+- **Nautilus**:
+
+  - Linux 
     
+        export OMP_NUM_THREADS=1
+
+        mpirun -n 96 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+          --bind-to core:overload-allowed --report-bindings \
+          --rank-by slot --map-by slot \
+          python -m mpi4py.futures ./projects/des_y3/EXAMPLE_EMUL2_NAUTILUS1.py \
+            --root ./projects/des_y3/ --outroot "EXAMPLE_EMUL2_NAUTILUS1"  \
+            --maxfeval 750000 --nlive 2048 --neff 15000 \
+            --flive 0.01 --nnetworks 5
+
+  - macOS (arm)
+
+        export OMP_NUM_THREADS=1
+
+        mpirun -n 12 --oversubscribe \
+          python -m mpi4py.futures ./projects/des_y3/EXAMPLE_EMUL2_NAUTILUS1.py \
+            --root ./projects/des_y3/ \
+            --outroot "EXAMPLE_EMUL2_NAUTILUS1" \
+            --maxfeval 750000 --nlive 2048 --neff 15000 \
+            --flive 0.01 --nnetworks 5
+
+- **Global Minimizer**:
+
+  Our minimizer is a reimplementation of `Procoli`, developed by Karwal et al (arXiv:2401.14225) 
+
+  - Linux ($n_{\rm param} = 17$, assuming node with 96 cores)
+
+        export OMP_NUM_THREADS=4
+
+        mpirun -n 24 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+          --bind-to core:overload-allowed --report-bindings \
+          --rank-by slot --map-by slot \
+          python ./projects/des_y3/EXAMPLE_EMUL2_MINIMIZE1.py \
+            --root ./projects/des_y3/ \
+            --outroot "EXAMPLE_EMUL2_MIN1" \
+            --nstw 350
+
+  - macOS (arm)
+
+        export OMP_NUM_THREADS=1
+
+        mpirun -n 12 --oversubscribe \
+          python ./projects/des_y3/EXAMPLE_EMUL2_MINIMIZE1.py \
+            --root ./projects/des_y3/ \
+            --outroot "EXAMPLE_EMUL2_MIN1" \
+            --nstw 350
+    
+    
+  The number of steps per Emcee walker per temperature is $n_{\rm stw}$,
+  and the number of walkers is $n_{\rm w}={\rm max}(3n_{\rm params},n_{\rm MPI})$.
+  The minimum number of total evaluations is $3n_{\rm params} \times n_{\rm T} \times n_{\rm stw}$, which can be distributed among $n_{\rm MPI} = 3n_{\rm params}$ MPI processes for faster results.
+
+- **Profile**: 
+
+  - Linux ($n_{\rm param} = 17$, assuming node with 96 cores)
+
+        export OMP_NUM_THREADS=4
+
+        mpirun -n 24 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+          --bind-to core:overload-allowed --report-bindings \
+          --rank-by slot --map-by slot \
+          python ./projects/des_y3/EXAMPLE_EMUL2_PROFILE1.py \
+            --root ./projects/des_y3/ --cov 'chains/EXAMPLE_EMUL2_MCMC1.covmat' \
+            --outroot "EXAMPLE_EMUL2_PROFILE1" \
+            --factor 3 --nstw 350 --numpts 10 \
+            --profile 1 \
+            --minfile="./projects/des_y3/chains/EXAMPLE_EMUL2_MIN1.txt"
+
+  - macOS (arm)
+        
+        export OMP_NUM_THREADS=1
+        
+        mpirun -n 12 --oversubscribe \
+          python ./projects/des_y3/EXAMPLE_EMUL2_PROFILE1.py \
+            --root ./projects/des_y3/ \
+            --cov 'chains/EXAMPLE_EMUL2_MCMC1.covmat' \
+            --outroot "EXAMPLE_EMUL2_PROFILE1" \
+            --factor 3 --nstw 350 --numpts 10 --profile 1 \
+            --minfile="./projects/des_y3/chains/EXAMPLE_EMUL2_MIN1.txt"
+
 Details on the matter power spectrum emulator designs will be presented in the 
 [emulator_code](https://github.com/SBU-COSMOLIKE/emulators_code) repository. 
 Basically, we apply standard neural network techniques to generalize 
