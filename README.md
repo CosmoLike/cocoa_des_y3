@@ -148,9 +148,17 @@ and
 > [!Warning]
 > The code and examples associated with this section are still in alpha stage
 
-Our main line of research involves emulators that simulate the entire Cosmolike data vectors, and each project (LSST, Roman, DES) contains its own README with emulator examples. The speed of such emulators is incredible, especially when GPUs are available, and our emulators do take advantage of the CPU-GPU integration on Apple MX chips. For example, the average timing of lsst-y1 cosmic shear data vector emulation is around 0.005s ($\sim$ 200828 evaluations in $\sim$ 850.5 seconds) on a macOS M2 Pro.
+Our main line of research involves emulators that simulate the entire Cosmolike data vectors, 
+and each project (LSST, Roman, DES) contains its own README with emulator examples. 
+The speed of such emulators is incredible, especially when GPUs are available, 
+and our emulators do take advantage of the CPU-GPU integration on Apple MX chips.
 
-While the data vector emulators are incredibly fast, there is an intermediate approach that emulates only the Boltzmann outputs (comoving distance, linear and nonlinear matter power spectrum). This hybrid-ML case can offer greater flexibility, especially in the initial phases of a research project, as changes to the modeling of nuisance parameters or to the assumed galaxy distributions do not require retraining of the network. 
+While the data vector emulators are incredibly fast, there is an intermediate 
+approach that emulates only the Boltzmann outputs (comoving distance, linear and 
+nonlinear matter power spectrum). This hybrid-ML case can offer greater flexibility, 
+especially in the initial phases of a research project, as changes to the modeling 
+of nuisance parameters or to the assumed galaxy distributions do not require 
+retraining of the network. 
 
 Examples in the hybrid case all have the prefix **EXAMPLE_EMUL2** (note the `2`). The required flags on `set_installation_options.sh` are similar to what we showed in the previous emulator section.
 
@@ -173,7 +181,7 @@ Now, users must follow all the steps below.
         export OMP_NUM_THREADS=4; export OMP_PROC_BIND=disabled; \
         export OMP_PLACES=cores; export OMP_DYNAMIC=FALSE; \
         export OPENBLAS_NUM_THREADS=1; export MKL_NUM_THREADS=1
-    
+
  **Step :three:** Run `cobaya-run` on the first emulator example, following the commands below (here we only provide lsst-y1 examples).
 
 - **One model evaluation**:
