@@ -142,3 +142,74 @@ and
 
         mpirun -n 4 --oversubscribe \
           cobaya-run ./projects/des_y3/EXAMPLE_MCMC1.yaml -f
+
+# Running Hybrid Cosmolike-ML emulators <a name="cobaya_base_code_examples_emul2"></a>
+
+> [!Warning]
+> The code and examples associated with this section are still in alpha stage
+
+Our main line of research involves emulators that simulate the entire Cosmolike data vectors, and each project (LSST, Roman, DES) contains its own README with emulator examples. The speed of such emulators is incredible, especially when GPUs are available, and our emulators do take advantage of the CPU-GPU integration on Apple MX chips. For example, the average timing of lsst-y1 cosmic shear data vector emulation is around 0.005s ($\sim$ 200828 evaluations in $\sim$ 850.5 seconds) on a macOS M2 Pro.
+
+While the data vector emulators are incredibly fast, there is an intermediate approach that emulates only the Boltzmann outputs (comoving distance, linear and nonlinear matter power spectrum). This hybrid-ML case can offer greater flexibility, especially in the initial phases of a research project, as changes to the modeling of nuisance parameters or to the assumed galaxy distributions do not require retraining of the network. 
+
+Examples in the hybrid case all have the prefix **EXAMPLE_EMUL2** (note the `2`). The required flags on `set_installation_options.sh` are similar to what we showed in the previous emulator section.
+
+Now, users must follow all the steps below.
+
+ **Step :one:**: Activate the private Python environment by sourcing the script `start_cocoa.sh`
+
+    source start_cocoa.sh
+
+ **Step :two:**: Select the number of OpenMP cores. Below, we set it to 4, the ideal setting for hybrid examples.
+
+  - Linux
+
+        export OMP_NUM_THREADS=4; export OMP_PROC_BIND=close; \
+        export OMP_PLACES=cores; export OMP_DYNAMIC=FALSE; \
+        export OPENBLAS_NUM_THREADS=1; export MKL_NUM_THREADS=1
+
+  - macOS (arm)
+    
+        export OMP_NUM_THREADS=4; export OMP_PROC_BIND=disabled; \
+        export OMP_PLACES=cores; export OMP_DYNAMIC=FALSE; \
+        export OPENBLAS_NUM_THREADS=1; export MKL_NUM_THREADS=1
+    
+ **Step :three:** Run `cobaya-run` on the first emulator example, following the commands below (here we only provide lsst-y1 examples).
+
+- **One model evaluation**:
+
+  - Linux
+
+        mpirun -n 1 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+          --bind-to core:overload-allowed --report-bindings \
+          --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
+          cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_EVALUATE1.yaml -f
+
+  - macOS (arm)
+    
+        mpirun -n 1 --oversubscribe  cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_EVALUATE1.yaml -f
+    
+- **MCMC (Metropolis-Hastings Algorithm)**:
+
+  - Linux
+
+        mpirun -n 4 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+          --bind-to core:overload-allowed --report-bindings \
+          --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
+          cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_MCMC1.yaml -r
+
+  - macOS (arm)
+
+        mpirun -n 4 --oversubscribe \
+          cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_MCMC1.yaml -r
+    
+Details on the matter power spectrum emulator designs will be presented in the 
+[emulator_code](https://github.com/SBU-COSMOLIKE/emulators_code) repository. 
+Basically, we apply standard neural network techniques to generalize 
+the *syren-new* Eq. 6 of [arXiv:2410.14623](https://arxiv.org/abs/2410.14623) 
+formula for the linear power spectrum (w0waCDM with a fixed neutrino mass of $0.06$ eV) 
+to new models, extended ranges, or higher precision. 
+Similarly, we use networks to generalize the *syren-Halofit* LCDM nonlinear 
+boost fit (Eq. 11 of [arXiv:2402.17492](https://arxiv.org/abs/2402.17492)).
