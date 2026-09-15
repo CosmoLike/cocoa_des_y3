@@ -22,12 +22,12 @@ From `Cocoa/Readme` instructions:
 >     (...)
 >     export DES_Y3_URL="https://github.com/CosmoLike/cocoa_des_y3.git"
 >     export DES_Y3_NAME="des_y3"
->     #BRANCH: if unset, load the latest commit on the specified branch
+>     #Pin the project version with at most one of the keys below (COMMIT, BRANCH, or TAG).
+>     #If more than one is set, COMMIT wins over BRANCH, and BRANCH wins over TAG.
+>     #If none is set, Cocoa loads the latest commit on the repository default branch.
 >     #export DES_Y3_GIT_BRANCH="main"
->     #COMMIT: if unset, load the specified commit
->     export DES_Y3_GIT_COMMIT="abc"
->     #BRANCH: if unset, load the specified TAG
->     export DES_Y3_GIT_TAG=v4.07
+>     #export DES_Y3_GIT_COMMIT="abc"
+>     export DES_Y3_GIT_TAG="v4.10.4"
 
 > [!NOTE]
 > In case users need to rerun `setup_cocoa.sh`, Cocoa will not download previously installed packages, cosmolike projects, or large datasets, unless the following keys are set on `set_installation_options.sh`
@@ -117,8 +117,8 @@ and
 
   - Linux
 
-        mpirun -n 1 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
-          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+        "${CONDA_PREFIX}"/bin/mpirun -n 1 --oversubscribe \
+          --mca pml ob1 --mca btl vader,tcp,self \
           --bind-to core:overload-allowed --report-bindings \
           --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
           cobaya-run ./projects/des_y3/EXAMPLE_EVALUATE1.yaml -f
@@ -132,8 +132,8 @@ and
 
   - Linux
 
-        mpirun -n 4 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
-          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+        "${CONDA_PREFIX}"/bin/mpirun -n 1 --oversubscribe \
+          --mca pml ob1 --mca btl vader,tcp,self \
           --bind-to core:overload-allowed --report-bindings \
           --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
           cobaya-run ./projects/des_y3/EXAMPLE_MCMC1.yaml -f
@@ -188,8 +188,8 @@ Now, users must follow all the steps below.
 
   - Linux
 
-        mpirun -n 1 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
-          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+        "${CONDA_PREFIX}"/bin/mpirun -n 1 --oversubscribe \
+          --mca pml ob1 --mca btl vader,tcp,self \
           --bind-to core:overload-allowed --report-bindings \
           --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
           cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_EVALUATE1.yaml -f
@@ -202,8 +202,8 @@ Now, users must follow all the steps below.
 
   - Linux
 
-        mpirun -n 4 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
-          --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
+        "${CONDA_PREFIX}"/bin/mpirun -n 4 --oversubscribe \
+          --mca pml ob1 --mca btl vader,tcp,self \
           --bind-to core:overload-allowed --report-bindings \
           --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
           cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_MCMC1.yaml -r
@@ -213,9 +213,32 @@ Now, users must follow all the steps below.
         mpirun -n 4 --oversubscribe \
           cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_MCMC1.yaml -r
 
-> [!Note]
-> The flag `--mca btl vader,tcp,self` also works unchanged on multi-node runs: 
-> Open MPI uses `vader` (shared memory) within a node and `tcp` between nodes automatically.
+> [!NOTE]
+> **Running on more than one node.** The flag `--mca btl vader,tcp,self` works unchanged across
+> nodes: Open MPI picks the transport per pair of ranks, using shared memory (`vader`) within a
+> node and TCP between nodes. Three things deserve attention on multi-node runs:
+>
+> 1. **Network interface.** The TCP layer must not select an interface that is not routable
+>    between compute nodes. The flag `--mca btl_tcp_if_exclude lo,docker0,virbr0,ib0` excludes
+>    the common offenders. TCP bandwidth is not a limitation for our workloads, which exchange
+>    small, infrequent MPI messages.
+>
+> 2. **Environment.** Ranks on remote nodes must see Cocoa's environment (`ROOTDIR`, `PATH`,
+>    `LD_LIBRARY_PATH`, `PYTHONPATH`, `CONDA_PREFIX`, the OpenMP/BLAS thread settings, and
+>    `CLIK_PATH`/`CLIK_DATA`/`CLIK_PLUGIN`). Slurm forwards the submitting environment
+>    automatically; the explicit `-x` flags in our sbatch templates repeat this so the
+>    scripts also work under ssh-based launchers. No other Cocoa installation flags are read at runtime.
+>
+> 3. **Slurm geometry.** Keep `ntasks-per-node` × `cpus-per-task` no larger than the cores per
+>    node, and use `--map-by slot:pe=${OMP_NUM_THREADS}` so each rank reserves the cores its
+>    OpenMP threads will use.
+
+> [!NOTE]
+> **Note on core oversubscription**: an MPI process that is waiting still burns 100% of its
+> core, checking for messages in a loop. With more processes than cores, this stalls the
+> processes doing real work. Open MPI usually detects this and makes waiting processes give
+> up the CPU, but its detection can be fooled. Adding `--mca mpi_yield_when_idle 1` forces
+> that behavior; it is harmless otherwise.
 
 The `Nautilus`, `Minimizer`, `Profile`, and `Emcee` scripts below contain an internally 
 defined `yaml_string` that specifies priors, 
@@ -227,7 +250,11 @@ likelihoods, and the theory code, all following Cobaya Conventions.
     
         export OMP_NUM_THREADS=1
 
-        mpirun -n 96 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+        "${CONDA_PREFIX}"/bin/mpirun -n 96 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          -x PATH -x LD_LIBRARY_PATH -x PYTHONPATH -x CONDA_PREFIX -x ROOTDIR \
+          -x OMP_NUM_THREADS -x OMP_PROC_BIND -x OMP_PLACES -x OMP_DYNAMIC \
+          -x OPENBLAS_NUM_THREADS -x MKL_NUM_THREADS -x CLIK_PATH -x CLIK_DATA \
+          -x CLIK_PLUGIN --mca mpi_yield_when_idle 1 \
           --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
           --bind-to core:overload-allowed --report-bindings \
           --rank-by slot --map-by slot \
@@ -255,7 +282,11 @@ likelihoods, and the theory code, all following Cobaya Conventions.
 
         export OMP_NUM_THREADS=4
 
-        mpirun -n 24 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+        "${CONDA_PREFIX}"/bin/mpirun -n 24 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          -x PATH -x LD_LIBRARY_PATH -x PYTHONPATH -x CONDA_PREFIX -x ROOTDIR \
+          -x OMP_NUM_THREADS -x OMP_PROC_BIND -x OMP_PLACES -x OMP_DYNAMIC \
+          -x OPENBLAS_NUM_THREADS -x MKL_NUM_THREADS -x CLIK_PATH -x CLIK_DATA \
+          -x CLIK_PLUGIN --mca mpi_yield_when_idle 1 \
           --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
           --bind-to core:overload-allowed --report-bindings \
           --rank-by slot --map-by slot \
@@ -285,7 +316,11 @@ likelihoods, and the theory code, all following Cobaya Conventions.
 
         export OMP_NUM_THREADS=4
 
-        mpirun -n 24 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+        "${CONDA_PREFIX}"/bin/mpirun -n 24 --oversubscribe --mca pml ob1 --mca btl vader,tcp,self \
+          -x PATH -x LD_LIBRARY_PATH -x PYTHONPATH -x CONDA_PREFIX -x ROOTDIR \
+          -x OMP_NUM_THREADS -x OMP_PROC_BIND -x OMP_PLACES -x OMP_DYNAMIC \
+          -x OPENBLAS_NUM_THREADS -x MKL_NUM_THREADS -x CLIK_PATH -x CLIK_DATA \
+          -x CLIK_PLUGIN --mca mpi_yield_when_idle 1 \
           --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
           --bind-to core:overload-allowed --report-bindings \
           --rank-by slot --map-by slot \
