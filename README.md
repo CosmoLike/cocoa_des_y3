@@ -196,7 +196,8 @@ Now, users must follow all the steps below.
 
   - macOS (arm)
     
-        mpirun -n 1 --oversubscribe  cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_EVALUATE1.yaml -f
+        mpirun -n 1 --oversubscribe \
+          cobaya-run ./projects/des_y3/EXAMPLE_EMUL2_EVALUATE1.yaml -f
     
 - **MCMC (Metropolis-Hastings Algorithm)**:
 
