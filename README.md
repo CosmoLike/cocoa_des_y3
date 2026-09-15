@@ -289,7 +289,7 @@ likelihoods, and the theory code, all following Cobaya Conventions.
           -x CLIK_PLUGIN --mca mpi_yield_when_idle 1 \
           --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
           --bind-to core:overload-allowed --report-bindings \
-          --rank-by slot --map-by slot \
+          --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
           python ./projects/des_y3/EXAMPLE_EMUL2_MINIMIZE1.py \
             --root ./projects/des_y3/ \
             --outroot "EXAMPLE_EMUL2_MIN1" \
@@ -323,7 +323,7 @@ likelihoods, and the theory code, all following Cobaya Conventions.
           -x CLIK_PLUGIN --mca mpi_yield_when_idle 1 \
           --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
           --bind-to core:overload-allowed --report-bindings \
-          --rank-by slot --map-by slot \
+          --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
           python ./projects/des_y3/EXAMPLE_EMUL2_PROFILE1.py \
             --root ./projects/des_y3/ --cov 'chains/EXAMPLE_EMUL2_MCMC1.covmat' \
             --outroot "EXAMPLE_EMUL2_PROFILE1" \
