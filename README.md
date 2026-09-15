@@ -230,7 +230,7 @@ Now, users must follow all the steps below.
 >    scripts also work under ssh-based launchers. No other Cocoa installation flags are read at runtime.
 >
 > 3. **Slurm geometry.** Keep `ntasks-per-node` × `cpus-per-task` no larger than the cores per
->    node, and use `--map-by slot:pe=${OMP_NUM_THREADS}` so each rank reserves the cores its
+>    node, and use `--map-by numa:pe=${OMP_NUM_THREADS}` so each rank reserves the cores its
 >    OpenMP threads will use.
 
 > [!NOTE]
@@ -257,7 +257,7 @@ likelihoods, and the theory code, all following Cobaya Conventions.
           -x CLIK_PLUGIN --mca mpi_yield_when_idle 1 \
           --mca btl_tcp_if_exclude lo,docker0,virbr0,ib0 \
           --bind-to core:overload-allowed --report-bindings \
-          --rank-by slot --map-by slot \
+          --rank-by slot --map-by numa:pe=${OMP_NUM_THREADS} \
           python -m mpi4py.futures ./projects/des_y3/EXAMPLE_EMUL2_NAUTILUS1.py \
             --root ./projects/des_y3/ --outroot "EXAMPLE_EMUL2_NAUTILUS1"  \
             --maxfeval 750000 --nlive 2048 --neff 15000 \
