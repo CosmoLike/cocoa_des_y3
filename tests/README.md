@@ -62,7 +62,9 @@ model. The TATT variants set
 | 19-22 | `test_example4.py` | DES-Y1 | 3x2pt (example4) |
 | 23-26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`) |
 
-Accuracy checks (`test_accuracy.py`, A1-A12): the three probes with
+### Accuracy checks (`test_accuracy.py`, A1-A12)
+
+The three probes with
 both IA models on both data sets (A1-A6 des_y3, A7-A12 des_y1),
 re-evaluated with every setting pushed far beyond the defaults at
 once. A one-knob-at-a-time scan on the des_y3 example2 NLA
@@ -86,6 +88,8 @@ the file on its own, or skip it with
 
     python -m pytest ./projects/des_y3/tests --ignore ./projects/des_y3/tests/test_accuracy.py
 
+### Synthetic data vectors
+
 This project's shipped data vectors are REAL data (the DES-Y3 and
 DES-Y1 measurements), and the example cosmology is not a best fit of
 either, so the $\chi^2$ there sits far from the minimum, where it
@@ -103,7 +107,7 @@ Within a data set the full-length 3x2pt vector serves every probe
 response is quadratic and the drift and accuracy numbers stay
 meaningful.
 
-## Why the tests keep their own copy of everything
+## Tests keep their own copy of configurations and data
 
 The tests read nothing from the live project: not `../data`, not the
 `EXAMPLE_EVALUATE` yaml files, and not the likelihood default yaml
