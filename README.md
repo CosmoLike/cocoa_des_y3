@@ -411,7 +411,7 @@ the script `start_cocoa.sh`
 
     python -m pytest ./projects/des_y3/tests
 
-# Minimum accuracy parameters <a name="des_y3_minimum_accuracy"></a>
+## Minimum accuracy parameters <a name="des_y3_minimum_accuracy"></a>
 
 The advisory checks in `tests/test_accuracy.py` measure the
 numerical error of the default accuracy settings: each setting is
