@@ -394,10 +394,10 @@ The `tests/` folder holds 24 pass/fail tests. They cover six
 configurations: cosmic shear, 3x2pt, and 2x2pt, each evaluated on the
 DES-Y3 covariance and n(z) and again on the DES-Y1 covariance and
 n(z), with both the NLA and the TATT intrinsic-alignment models. Each
-configuration gets one chi2 test against a stored reference and one
+configuration gets one $\chi^2$ test against a stored reference and one
 race check: ten cosmologies evaluated in a row on one model, with the
 10th evaluation of the fiducial point required to reproduce a fresh
-evaluation to 1e-4. Every model build runs in its own worker
+evaluation to $10^{-4}$. Every model build runs in its own worker
 subprocess: the Y1 and Y3 data sets have different dimensions, and
 cosmolike aborts a process that initializes both. Everything a test
 evaluates is a frozen copy under `tests/frozen/`, pinned by a SHA-256
@@ -418,13 +418,13 @@ error of the example defaults (`accuracyboost: 1.0`,
 `AccuracyBoost: 1.05`, `k_per_logint: 10`): each configuration is
 re-evaluated at its reference point with every knob pushed far beyond
 the defaults (cosmolike `accuracyboost: 3`, `integration_accuracy:
-10`, `lmax: 200000`, `kmax_boltzmann: 40`; CAMB `AccuracyBoost: 2`,
+10`, ``lmax: 200000``, ``kmax_boltzmann: 40``; CAMB `AccuracyBoost: 2`,
 `k_per_logint: 50`, `kmax: 50`), and the difference
 `delta chi2 = chi2(high accuracy) - chi2(default)` is reported. The
 target is `|delta chi2|` below 0.2, the bound the drift tests use.
 Values measured at the freeze of 2026-09-21:
 
-| check | configuration                        | delta chi2 |
+| check | configuration                        | $\Delta\chi^2$ |
 |-------|--------------------------------------|-----------:|
 | A1    | des_y3 cosmic shear (example1), NLA  |  -0.000029 |
 | A2    | des_y3 cosmic shear (example1), TATT |  -0.000033 |
@@ -441,7 +441,7 @@ Values measured at the freeze of 2026-09-21:
 
 One knob at a time on the des_y3 3x2pt (example2, NLA) configuration:
 
-| knob                                     | delta chi2 |
+| knob                                     | $\Delta\chi^2$ |
 |------------------------------------------|-----------:|
 | `accuracyboost: 3`                       |  +0.000084 |
 | `accuracyboost: 5` (stress)              |  +0.000535 |

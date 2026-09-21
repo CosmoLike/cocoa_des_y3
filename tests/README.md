@@ -1,6 +1,6 @@
 # Unit tests for the des_y3 likelihoods
 
-These tests catch two kinds of silent breakage: a chi2 that drifted
+These tests catch two kinds of silent breakage: a $\chi^2$ that drifted
 because code or data changed by accident, and a race condition (a bug
 where evaluating several points in a row corrupts a later result
 through leftover internal state or colliding OpenMP threads).
@@ -29,7 +29,7 @@ Without pytest:
 
 The suite changes no project files. Each test streams a progress line
 per model build and per evaluation, then a report block with the
-computed chi2, the stored reference, the difference, and the pass
+computed $\chi^2$, the stored reference, the difference, and the pass
 limit. A full run performs about 150 likelihood evaluations and takes
 a few minutes. The test modules force `OMP_NUM_THREADS=4` internally.
 The suite never waits for a keypress: a space/enter prompt between
@@ -38,15 +38,15 @@ so run the command with nothing piped after it.
 
 ## The 24 tests
 
-The standard configurations get four tests each: a chi2 drift check
+The standard configurations get four tests each: a $\chi^2$ drift check
 and a race check, both in the NLA and in the TATT intrinsic-alignment
 model (TATT: `IA_model: 1` with `DES_A2_1=0.05`, `DES_BTA_1=0.05`,
 `DES_A2_2=-1.51541`).
 
 | check | pass limit                                        | a failure means                    |
 |-------|---------------------------------------------------|------------------------------------|
-| chi2  | within 0.2 of `frozen/reference_chi2.json`        | code or data changed the numbers   |
-| race  | fresh vs 10th of 10 cosmologies in a row, to 1e-4 | leftover state or an OpenMP race   |
+| $\chi^2$  | within 0.2 of `frozen/reference_chi2.json`        | code or data changed the numbers   |
+| race  | fresh vs 10th of 10 cosmologies in a row, to $10^{-4}$ | leftover state or an OpenMP race   |
 
 | tests | file | data | configuration |
 |-------|------|------|---------------|
@@ -60,10 +60,10 @@ model (TATT: `IA_model: 1` with `DES_A2_1=0.05`, `DES_BTA_1=0.05`,
 Accuracy checks (`test_accuracy.py`, A1-A12): the three probes with
 both IA models on both data sets (A1-A6 des_y3, A7-A12 des_y1),
 re-evaluated with the numerical settings pushed far beyond the
-defaults (cosmolike accuracyboost 2, integration_accuracy 10,
-lmax 200000, kmax_boltzmann 40; CAMB AccuracyBoost 2, k_per_logint
-50, kmax 50). Each check reports
-delta chi2 = chi2(high accuracy) - chi2(default, frozen), no
+defaults (cosmolike `accuracyboost: 2`, `integration_accuracy: 10`,
+`lmax: 200000`, `kmax_boltzmann: 40`; CAMB `AccuracyBoost: 2`, k_per_logint
+50, `kmax: 50`). Each check reports
+$\Delta\chi^2 = \chi^2(\text{high accuracy}) - \chi^2(\text{default})$, no
 pass/fail. A one-knob-at-a-time scan on the des_y3 example2 NLA
 configuration runs first, so a large all-knobs delta can be
 attributed to the knob causing it. High-accuracy evaluations take
@@ -72,7 +72,7 @@ minutes; skip the file with
 
 This project's shipped data vectors are REAL data (the DES-Y3 and
 DES-Y1 measurements), and the example cosmology is not a best fit of
-either, so the chi2 there sits far from the minimum, where it
+either, so the $\chi^2$ there sits far from the minimum, where it
 responds linearly to tiny numerical changes. Every variant therefore
 evaluates against a data vector generated at the fiducial point
 during the freeze, one pair per data set:
@@ -83,7 +83,7 @@ during the freeze, one pair per data set:
 | DES-Y1 | `frozen/data/synthetic_des_y1.dataset` | `frozen/data/tatt_des_y1.dataset` | the example4 model |
 
 Within a data set the full-length 3x2pt vector serves every probe
-(the masks select their sections); at its own minimum the chi2
+(the masks select their sections); at its own minimum the $\chi^2$
 response is quadratic and the drift and accuracy numbers stay
 meaningful.
 
@@ -121,6 +121,6 @@ or likelihood defaults requires a re-freeze:
 
 Run it from the `Cocoa/` folder with the environment set up as above.
 It rebuilds `frozen/` from the current project, prints the twelve new
-reference chi2 values, and rewrites the manifest. Review the printed
-chi2 values against the old references before committing: they define
+reference $\chi^2$ values, and rewrites the manifest. Review the printed
+$\chi^2$ values against the old references before committing: they define
 what every later test run compares against.
