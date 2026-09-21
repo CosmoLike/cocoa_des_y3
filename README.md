@@ -390,25 +390,26 @@ boost fit (Eq. 11 of [arXiv:2402.17492](https://arxiv.org/abs/2402.17492)).
 
 # Unit tests <a name="des_y3_unit_tests"></a>
 
-The `tests/` folder holds 24 pass/fail tests. They cover six
-configurations: cosmic shear, 3x2pt, and 2x2pt, each evaluated on the
-DES-Y3 covariance and n(z) and again on the DES-Y1 covariance and
-n(z), with both the NLA and the TATT intrinsic-alignment models. Each
-configuration gets one $\chi^2$ test against a stored reference and one
-race check: ten cosmologies evaluated in a row on one model, with the
-10th evaluation of the fiducial point required to match the
-fiducial evaluated on its own within $10^{-4}$. Every model build runs in its own worker
-subprocess: the Y1 and Y3 data sets have different dimensions, and
-cosmolike aborts a process that initializes both. Everything a test
-evaluates is the tests' own snapshot under `tests/frozen/`, pinned by a SHA-256
-manifest, so edits to the live examples, the likelihood defaults, or
-`data/` cannot reach the tests. To run the tests (from the `Cocoa/`
-folder, cocoa environment active, `start_cocoa.sh` sourced):
+The `tests/` folder holds unit tests for the likelihoods of this
+project: they compare each likelihood against stored reference
+values, check for race conditions from OpenMP threading, and measure
+the numerical error of the default accuracy settings. The
+tests read nothing from the live project;
+[tests/README.md](tests/README.md) describes every test, the tests'
+own data snapshot, and how to refresh it.
+
+We assume users are in the Conda cocoa environment from a previous
+`conda activate cocoa` command, that the shell is bash, and that the
+current folder is the cocoa main folder `cocoa/Cocoa`.
+
+**Step :one:**: activate the private Python environment by sourcing
+the script `start_cocoa.sh`
+
+    source start_cocoa.sh
+
+**Step :two:**: run the tests of this project
 
     python -m pytest ./projects/des_y3/tests
-
-[tests/README.md](tests/README.md) lists every test and the procedure
-that refreshes the snapshot.
 
 # Minimum accuracy parameters <a name="des_y3_minimum_accuracy"></a>
 
