@@ -402,7 +402,7 @@ subprocess: the Y1 and Y3 data sets have different dimensions, and
 cosmolike aborts a process that initializes both. Everything a test
 evaluates is a frozen copy under `tests/frozen/`, pinned by a SHA-256
 manifest, so edits to the live examples, the likelihood defaults, or
-`data/` cannot reach the tests. To run the suite (from the `Cocoa/`
+`data/` cannot reach the tests. To run the tests (from the `Cocoa/`
 folder, cocoa environment active, `start_cocoa.sh` sourced):
 
     python -m pytest ./projects/des_y3/tests
