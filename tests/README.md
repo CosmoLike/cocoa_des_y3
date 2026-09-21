@@ -16,10 +16,27 @@ and the cosmolike C layer aborts the whole process when a second
 configuration with different dimensions initializes after the first.
 The isolation is internal; the commands below stay the same.
 
-## Running the tests
+Contents:
 
-From the `Cocoa/` folder, with the cocoa conda environment active and
-`start_cocoa.sh` sourced:
+1. [Running the tests](#run_tests)
+2. [The 24 tests](#the_tests)
+    1. [Accuracy checks](#accuracy_checks)
+    2. [Synthetic data vectors](#synthetic_vectors)
+3. [Tests keep their own copy of configurations and data](#frozen_copy)
+4. [Refreshing the frozen state (maintainers only)](#refreeze)
+
+## Running the tests <a name="run_tests"></a>
+
+We assume users are in the Conda cocoa environment from a previous
+`conda activate cocoa` command, that the shell is bash, and that the
+current folder is the cocoa main folder `cocoa/Cocoa`.
+
+**Step :one:**: activate the private Python environment by sourcing
+the script `start_cocoa.sh`
+
+    source start_cocoa.sh
+
+**Step :two:**: run the tests of this project
 
     python -m pytest ./projects/des_y3/tests
 
@@ -41,7 +58,7 @@ a few minutes. The test files force `OMP_NUM_THREADS=4` internally.
 > `less` (a program that stops after each full screen): run the
 > commands exactly as written above, with nothing added after them.
 
-## The 24 tests
+## The 24 tests <a name="the_tests"></a>
 
 The standard configurations get four tests each: a $\chi^2$ drift check
 and a race check, both in the NLA and in the TATT intrinsic-alignment
@@ -66,7 +83,7 @@ model. The TATT variants set
 | 19-22 | `test_example4.py` | DES-Y1 | 3x2pt (example4) |
 | 23-26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`) |
 
-### Accuracy checks (`test_accuracy.py`, A1-A12)
+### Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
 
 The three probes with
 both IA models on both data sets (A1-A6 des_y3, A7-A12 des_y1),
@@ -92,7 +109,7 @@ the file on its own, or skip it with
 
     python -m pytest ./projects/des_y3/tests --ignore ./projects/des_y3/tests/test_accuracy.py
 
-### Synthetic data vectors
+### Synthetic data vectors <a name="synthetic_vectors"></a>
 
 This project's shipped data vectors are REAL data (the DES-Y3 and
 DES-Y1 measurements), and the example cosmology is not a best fit of
@@ -111,7 +128,7 @@ Within a data set the full-length 3x2pt vector serves every probe
 response is quadratic and the drift and accuracy numbers stay
 meaningful.
 
-## Tests keep their own copy of configurations and data
+## Tests keep their own copy of configurations and data <a name="frozen_copy"></a>
 
 The tests read nothing from the live project: not `../data`, not the
 `EXAMPLE_EVALUATE` yaml files, and not the likelihood default yaml
@@ -136,14 +153,18 @@ edited, naming the file. The result: users may change the live data
 and examples freely, and nobody can quietly edit the frozen state
 either.
 
-## Refreshing the frozen state (maintainers only)
+## Refreshing the frozen state (maintainers only) <a name="refreeze"></a>
 
 A deliberate change to the data vectors, n(z), covariance, examples,
-or likelihood defaults requires a re-freeze:
+or likelihood defaults requires a re-freeze.
+
+**Step :one:**: set up the environment as in
+[Running the tests](#run_tests).
+
+**Step :two:**: rebuild the frozen state
 
     python ./projects/des_y3/tests/generate_frozen_reference.py --overwrite
 
-Run it from the `Cocoa/` folder with the environment set up as above.
 It rebuilds `frozen/` from the current project, prints the twelve new
 reference $\chi^2$ values, and rewrites the manifest. Review the printed
 $\chi^2$ values against the old references before committing: they define
