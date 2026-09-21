@@ -81,6 +81,15 @@ From `Cocoa/Readme` instructions:
 >
 > The project des_y3 contains jupyter notebook examples located at `projects/des_y3`.
 
+> [!NOTE]
+> The example notebooks load their shared support functions from
+> `Cocoa/external_modules/code/cosmolike_core/cosmolike_notebook_utils/`:
+> the CAMB run packaged for cosmolike, the data-vector plots, and the
+> Fisher-forecast helpers, called through the `cnu` namespace. The
+> notebooks keep only what is specific to this project: fiducial
+> values, the compiled-interface calls, and thin wrappers binding
+> them to the shared functions.
+
 
 To run the example
 
