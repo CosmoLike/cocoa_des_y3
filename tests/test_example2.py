@@ -60,7 +60,7 @@ class TestExample2ThreeXTwo(unittest.TestCase):
         chi2 = u.single_model_chi2(EXAMPLE, tatt=False)
         ref = self.reference[f"{EXAMPLE}_nla"]
         u.report_chi2_test(
-            5, "example2 (3x2pt, NLA) chi2 vs frozen reference",
+            5, "des_y3 example2 (3x2pt, NLA) chi2 vs frozen reference",
             chi2, ref, u.CHI2_TOLERANCE)
         self.assertLess(
             abs(chi2 - ref), u.CHI2_TOLERANCE,
@@ -72,7 +72,8 @@ class TestExample2ThreeXTwo(unittest.TestCase):
         u.assert_omp_threads()
         fresh, tenth = u.ten_in_a_row_chi2(EXAMPLE, tatt=False)
         u.report_race_test(
-            6, "example2 (3x2pt, NLA) race check: 10 cosmologies in a row",
+            6, "des_y3 example2 (3x2pt, NLA) race check: "
+               "10 cosmologies in a row",
             fresh, tenth, u.RACE_TOLERANCE)
         self.assertLess(
             abs(tenth - fresh), u.RACE_TOLERANCE,
@@ -83,7 +84,7 @@ class TestExample2ThreeXTwo(unittest.TestCase):
         chi2 = u.single_model_chi2(EXAMPLE, tatt=True)
         ref = self.reference[f"{EXAMPLE}_tatt"]
         u.report_chi2_test(
-            7, "example2 (3x2pt, TATT) chi2 vs frozen reference",
+            7, "des_y3 example2 (3x2pt, TATT) chi2 vs frozen reference",
             chi2, ref, u.CHI2_TOLERANCE)
         self.assertLess(
             abs(chi2 - ref), u.CHI2_TOLERANCE,
@@ -95,7 +96,8 @@ class TestExample2ThreeXTwo(unittest.TestCase):
         u.assert_omp_threads()
         fresh, tenth = u.ten_in_a_row_chi2(EXAMPLE, tatt=True)
         u.report_race_test(
-            8, "example2 (3x2pt, TATT) race check: 10 cosmologies in a row",
+            8, "des_y3 example2 (3x2pt, TATT) race check: "
+               "10 cosmologies in a row",
             fresh, tenth, u.RACE_TOLERANCE)
         self.assertLess(
             abs(tenth - fresh), u.RACE_TOLERANCE,

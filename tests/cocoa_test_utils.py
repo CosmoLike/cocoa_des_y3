@@ -12,6 +12,16 @@ The tests answer two questions about the des_y3 likelihoods:
      fresh evaluation of the same point. That class of bug is called a
      race condition or a state leak.
 
+The project ships two generations of DES data, and the suite covers
+both. The DES-Y3 configurations (example1: cosmic shear, example2:
+3x2pt, example2_2x2pt: its 2x2pt reduction) evaluate
+des_y3_real.dataset; the DES-Y1 configurations (example3, example4,
+example4_2x2pt: the same three probes) evaluate des_y1_real.dataset,
+an earlier data release with its own data vector, covariance, masks,
+and n(z) tables. The same des_y3.* likelihood classes serve both
+generations: only the dataset descriptor and the evaluation point
+change between a Y3 configuration and its Y1 twin.
+
 Everything a test evaluates is FROZEN: stored under tests/frozen/ and
 pinned by a SHA-256 hash (a 64-character fingerprint that changes when
 any byte of the file changes) in tests/manifest_sha256.json. The live
@@ -19,30 +29,31 @@ project configuration is never read, so a user can edit the examples,
 the likelihood default yaml files, or ../data without touching these
 tests. The frozen state has three parts:
 
-  - frozen/frozen_config_example{1,2}.py: one auto-generated module per
-    example holding (a) the complete cobaya configuration as a yaml
-    string, with every likelihood option and every parameter written
-    out, including the ones that normally come from the likelihood
-    default files (cosmic_shear.yaml, combo_3x2pt.yaml,
+  - frozen/frozen_config_example*.py: one auto-generated module per
+    configuration holding (a) the complete cobaya configuration as a
+    yaml string, with every likelihood option and every parameter
+    written out, including the ones that normally come from the
+    likelihood default files (cosmic_shear.yaml, combo_3x2pt.yaml,
     params_source.yaml, params_lens.yaml), and (b) the exact
     sampled-parameter point the reference chi2 was evaluated at.
     Because every default is materialized in the frozen copy, a later
     edit to a live default file is shadowed and cannot reach the test.
-  - frozen/data/: the tests' own copy of the data vectors, covariance,
-    n(z), and masks.
-  - frozen/EXAMPLE_EVALUATE{1,2}.yaml: snapshots of the example yaml
-    files at freeze time, kept only so a human can diff how the live
-    examples drifted; no test reads them.
+  - frozen/data/: the tests' own copy of the data vectors,
+    covariances, n(z), and masks of both data sets.
+  - frozen/EXAMPLE_EVALUATE{1,2,3,4}.yaml: snapshots of the example
+    yaml files at freeze time, kept only so a human can diff how the
+    live examples drifted; no test reads them.
 
 Every model build runs in its own worker subprocess: the public
 single_model_chi2 and ten_in_a_row_chi2 spawn a fresh python that
 imports this module, evaluates, and hands the numbers back through a
 temporary json file, while its progress lines stream to the same
-terminal. In this project both examples share one data set, so the
-isolation is preventive rather than required: in a project whose
-examples use different data-set dimensions (des_y3), the cosmolike
-C layer aborts a process that initializes both, and every project
-keeps one architecture so they all behave identically.
+terminal. Here the isolation is required, not preventive: the Y1 and
+Y3 data sets have different masked dimensions and different n(z)
+table lengths, and the cosmolike C layer aborts the whole process
+when a second configuration with different dimensions initializes
+after the first ("IP::set_mask: inconsistent mask"). One pytest run
+can then cover every configuration.
 
 Every test first verifies the manifest and refuses to run when any
 frozen file changed. Refreshing the frozen state is a deliberate
@@ -90,45 +101,49 @@ TATT_POINT = {
     "DES_A2_2": -1.51541,
 }
 
-# The two frozen configurations. "likelihood" is the cobaya component
+# The frozen configurations. "likelihood" is the cobaya component
 # name, needed to reach that block inside the loaded info dictionary;
 # "provenance" names the human-readable snapshot (never loaded).
 # The TATT variants evaluate against a data vector GENERATED WITH
 # TATT at the fiducial point. Reason: against an NLA-based vector the
 # TATT chi2 sits away from its minimum, where it responds linearly
 # (not quadratically) to tiny numerical changes, making drift bounds
-# twitchy. Both examples share one data set, so a single full-length
-# vector generated from the example2 TATT model serves every
-# configuration (the other probes' masks select their sections).
+# twitchy. The Y3 and Y1 configurations use different data sets, so
+# each data set gets its own generated vector, from its 3x2pt example;
+# within a data set the full-length vector serves every probe (the
+# other probes' masks select their sections).
 TATT_GENERATORS = {
     "tatt_des_y3.dataset": "example2",
+    "tatt_des_y1.dataset": "example4",
 }
 
-# This project's shipped data_file is REAL data, and the example
-# cosmology is not its best fit: the chi2 sits far from the minimum
-# (hundreds to thousands), where it responds LINEARLY to tiny theory
-# changes. A drift or accuracy check evaluated there reports alarming
-# shifts that say nothing about the numerics near a fit. The NLA
-# variants therefore evaluate against a SYNTHETIC data vector,
-# generated with the default (NLA) model at the fiducial point from
-# the example2 model during the freeze, exactly like the TATT vector:
-# at its own minimum the chi2 response is quadratic and stable.
-NLA_DATASET = "synthetic_des_y3.dataset"
-
+# This project's shipped data_files are REAL data (the DES-Y3 and
+# DES-Y1 measurements), and the example cosmology is not a best fit
+# of either: the chi2 sits far from the minimum (hundreds to
+# thousands), where it responds LINEARLY to tiny theory changes. A
+# drift or accuracy check evaluated there reports alarming shifts
+# that say nothing about the numerics near a fit. The NLA variants
+# therefore evaluate against SYNTHETIC data vectors, generated with
+# the default (NLA) model at the fiducial point during the freeze,
+# one per data set, exactly like the TATT vectors: at its own minimum
+# the chi2 response is quadratic and stable.
 # Every generated vector: {descriptor name: (source example, TATT?)}.
-# One full-length vector per IA model, generated from the example2
-# model, serves every configuration (the other probes' masks select
-# their sections).
 SYNTHETIC_VECTORS = {
-    NLA_DATASET: ("example2", False),
+    "synthetic_des_y3.dataset": ("example2", False),
     "tatt_des_y3.dataset": ("example2", True),
+    "synthetic_des_y1.dataset": ("example4", False),
+    "tatt_des_y1.dataset": ("example4", True),
 }
 
 # High-accuracy settings for the accuracy advisory checks
 # (test_accuracy.py): the same physics evaluated with the numerical
 # knobs pushed far beyond the defaults.
 HIGH_ACCURACY_LIKELIHOOD = {
-    "accuracyboost": 5.0,       # default 1.0
+    # boost 2 is converged in every project scanned; 5 triggers a
+    # breakdown inside some cosmolike interfaces (desy1xplanck: +27 in
+    # chi2 from this knob alone), so the all-knobs check uses 2 and
+    # the one-at-a-time scan keeps 5 as a deliberate stress knob
+    "accuracyboost": 2.0,       # default 1.0
     "integration_accuracy": 10,  # default 0
     "lmax": 200000,             # default 50000-75000
     "kmax_boltzmann": 40.0,     # default 5.0-7.5
@@ -142,18 +157,48 @@ HIGH_ACCURACY_CAMB_EXTRA_ARGS = {
     "kmax": 50.0,               # default 5.0-7.5
 }
 
+# The one-at-a-time scan of test_accuracy.py: each entry is (label,
+# likelihood overrides, camb extra_args overrides), evaluated alone on
+# the example2 NLA configuration before the all-knobs checks, so a
+# large all-knobs delta can be attributed to the knob causing it. The
+# accuracyboost=5 entry is a stress knob: it exceeds what measuring
+# the default numerics needs, and it is kept because it exposed an
+# interface breakdown (a suspected fixed-size table) in desy1xplanck.
+# Investigation order when several knobs move the chi2: raise the
+# cosmolike accuracyboost first (cheap), then camb k_per_logint, and
+# only then camb AccuracyBoost (expensive at run time): an apparent
+# CAMB sensitivity can masquerade as unresolved cosmolike-side
+# resolution, so the cheap knobs must be settled before the expensive
+# one is blamed. kmax_boltzmann and camb kmax are one physical cutoff
+# seen from the two sides, so the scan moves them together.
+ACCURACY_KNOBS = [
+    ("accuracyboost -> 2", {"accuracyboost": 2.0}, {}),
+    ("accuracyboost -> 5 (stress)", {"accuracyboost": 5.0}, {}),
+    ("integration_accuracy -> 10", {"integration_accuracy": 10}, {}),
+    ("lmax -> 200000", {"lmax": 200000}, {}),
+    ("kmax_boltzmann -> 40 + camb kmax -> 50",
+     {"kmax_boltzmann": 40.0}, {"kmax": 50.0}),
+    ("camb AccuracyBoost -> 2", {}, {"AccuracyBoost": 2.0}),
+    ("camb k_per_logint -> 50", {}, {"k_per_logint": 50}),
+]
+
+# example1/2 (and example2's 2x2pt reduction) evaluate the DES-Y3
+# data; example3/4 (and example4's 2x2pt reduction) evaluate the
+# DES-Y1 data through the same des_y3.* likelihood classes.
 EXAMPLES = {
     "example1": {
         "frozen_module": "frozen_config_example1.py",
         "provenance": "EXAMPLE_EVALUATE1.yaml",
         "likelihood": "des_y3.cosmic_shear",
         "tatt_dataset": "tatt_des_y3.dataset",
+        "nla_dataset": "synthetic_des_y3.dataset",
     },
     "example2": {
         "frozen_module": "frozen_config_example2.py",
         "provenance": "EXAMPLE_EVALUATE2.yaml",
         "likelihood": "des_y3.combo_3x2pt",
         "tatt_dataset": "tatt_des_y3.dataset",
+        "nla_dataset": "synthetic_des_y3.dataset",
     },
     "example2_2x2pt": {
         "frozen_module": "frozen_config_example2_2x2pt.py",
@@ -161,6 +206,29 @@ EXAMPLES = {
         "source_likelihood": "des_y3.combo_3x2pt",
         "likelihood": "des_y3.combo_2x2pt",
         "tatt_dataset": "tatt_des_y3.dataset",
+        "nla_dataset": "synthetic_des_y3.dataset",
+    },
+    "example3": {
+        "frozen_module": "frozen_config_example3.py",
+        "provenance": "EXAMPLE_EVALUATE3.yaml",
+        "likelihood": "des_y3.cosmic_shear",
+        "tatt_dataset": "tatt_des_y1.dataset",
+        "nla_dataset": "synthetic_des_y1.dataset",
+    },
+    "example4": {
+        "frozen_module": "frozen_config_example4.py",
+        "provenance": "EXAMPLE_EVALUATE4.yaml",
+        "likelihood": "des_y3.combo_3x2pt",
+        "tatt_dataset": "tatt_des_y1.dataset",
+        "nla_dataset": "synthetic_des_y1.dataset",
+    },
+    "example4_2x2pt": {
+        "frozen_module": "frozen_config_example4_2x2pt.py",
+        "provenance": "EXAMPLE_EVALUATE4.yaml",
+        "source_likelihood": "des_y3.combo_3x2pt",
+        "likelihood": "des_y3.combo_2x2pt",
+        "tatt_dataset": "tatt_des_y1.dataset",
+        "nla_dataset": "synthetic_des_y1.dataset",
     },
 }
 
@@ -344,9 +412,10 @@ def load_reference():
 
     Returns:
       the dictionary stored in frozen/reference_chi2.json: one entry
-      per configuration ("example1_nla", "example1_tatt",
-      "example2_nla", "example2_tatt") plus a "_meta" entry recording
-      when and how the references were generated. The file sits inside
+      per configuration and IA model ("example1_nla" and
+      "example1_tatt" through "example4_2x2pt_nla" and
+      "example4_2x2pt_tatt") plus a "_meta" entry recording when and
+      how the references were generated. The file sits inside
       frozen/, so verify_frozen() also protects it from editing.
     """
     with open(REFERENCE_FILE) as f:
@@ -441,6 +510,23 @@ ACCURACY: {label}
     return delta
 
 
+def report_knob(label, chi2, default_ref):
+    """Print one entry of the one-knob-at-a-time scan. Advisory only.
+
+    Arguments:
+      label       = the ACCURACY_KNOBS entry evaluated.
+      chi2        = chi2 with only that knob changed, this run.
+      default_ref = the frozen default-settings reference chi2.
+
+    Returns:
+      chi2 - default_ref, the printed difference.
+    """
+    delta = chi2 - default_ref
+    print(f"  KNOB {label:30s} chi2 = {chi2:12.6f}  "
+          f"delta = {delta:+12.6f}", flush=True)
+    return delta
+
+
 # -----------------------------------------------------------------------------
 # Model construction and evaluation
 # -----------------------------------------------------------------------------
@@ -475,7 +561,8 @@ def _frozen_module(example):
     return module
 
 
-def load_frozen_info(example, tatt, high_accuracy=False):
+def load_frozen_info(example, tatt, high_accuracy=False,
+                     overrides=None):
     """Build the cobaya input dictionary for one frozen configuration.
 
     Starts from the frozen module's yaml string and applies the only
@@ -533,14 +620,20 @@ def load_frozen_info(example, tatt, high_accuracy=False):
         # chi2 sits at a minimum (see the TATT_GENERATORS comment)
         likelihood_block["data_file"] = cfg["tatt_dataset"]
     else:
-        # NLA does the same against the synthetic NLA vector: the
-        # shipped data_file is real data and the fiducial point is far
-        # from its minimum (see the NLA_DATASET comment)
-        likelihood_block["data_file"] = NLA_DATASET
+        # NLA does the same against its data set's synthetic vector:
+        # the shipped data_file is real data and the fiducial point is
+        # far from its minimum (see the SYNTHETIC_VECTORS comment)
+        likelihood_block["data_file"] = cfg["nla_dataset"]
     if high_accuracy:
         likelihood_block.update(HIGH_ACCURACY_LIKELIHOOD)
         info["theory"]["camb"]["extra_args"].update(
             HIGH_ACCURACY_CAMB_EXTRA_ARGS)
+    if overrides is not None:
+        # one knob at a time (an ACCURACY_KNOBS entry): the same
+        # mechanism as high_accuracy, restricted to a single setting
+        like_over, camb_over = overrides
+        likelihood_block.update(like_over)
+        info["theory"]["camb"]["extra_args"].update(camb_over)
     if tatt:
         # a TATT parameter can be SAMPLED in the frozen configuration
         # (it has a prior; build_point then sets its value in the
@@ -669,7 +762,8 @@ def evaluate_chi2(model, point):
     return float(chi2)
 
 
-def _single_model_chi2_impl(example, tatt, high_accuracy=False):
+def _single_model_chi2_impl(example, tatt, high_accuracy=False,
+                            knob=None):
     """In-process body of single_model_chi2 (worker side).
 
     Runs inside the worker subprocess only: building a model here,
@@ -688,11 +782,20 @@ def _single_model_chi2_impl(example, tatt, high_accuracy=False):
     ia_label = "TATT" if tatt else "NLA"
     if high_accuracy:
         ia_label += ", high accuracy"
+    overrides = None
+    if knob is not None:
+        # knob = a label from ACCURACY_KNOBS; look up its overrides
+        matches = [k for k in ACCURACY_KNOBS if k[0] == knob]
+        if len(matches) != 1:
+            raise ValueError(f"unknown accuracy knob {knob!r}")
+        overrides = (matches[0][1], matches[0][2])
+        ia_label += f", knob: {knob}"
     print(f"  building model ({example}, {ia_label}) ...", flush=True)
     # load_frozen_info returns the frozen configuration dictionary with
     # the run-time adjustments applied; make_model turns it into an
     # evaluable cobaya Model (loads CAMB and the cosmolike interface)
-    info = load_frozen_info(example, tatt, high_accuracy=high_accuracy)
+    info = load_frozen_info(example, tatt, high_accuracy=high_accuracy,
+                            overrides=overrides)
     model = make_model(info)
     # build_point returns the frozen evaluation point, cross-checked
     # against the model's sampled-parameter set (drift fails loudly)
@@ -768,7 +871,7 @@ _WORKER_DRIVER = (
 )
 
 
-def _worker(function, example, tatt, high_accuracy, unused, result_path):
+def _worker(function, example, tatt, high_accuracy, knob, result_path):
     """Worker-side entry: run one evaluation and save the numbers.
 
     Arguments:
@@ -776,8 +879,8 @@ def _worker(function, example, tatt, high_accuracy, unused, result_path):
       example       = a key of EXAMPLES.
       tatt          = "1" for the TATT variant, "0" for NLA.
       high_accuracy = "1" for the pushed numerical settings, "0" not.
-      unused        = reserved argument slot (keeps the driver stable
-                      if an option is added later).
+      knob          = an ACCURACY_KNOBS label evaluated alone, or the
+                      empty string for none.
       result_path   = file the result is written into as json; the
                       parent reads it back. Progress prints go to the
                       inherited stdout, so the terminal streams them.
@@ -790,14 +893,15 @@ def _worker(function, example, tatt, high_accuracy, unused, result_path):
     high_accuracy = high_accuracy == "1"
     if function == "single":
         value = _single_model_chi2_impl(example, tatt,
-                                        high_accuracy=high_accuracy)
+                                        high_accuracy=high_accuracy,
+                                        knob=knob or None)
     else:
         value = list(_ten_in_a_row_impl(example, tatt))
     with open(result_path, "w") as f:
         json.dump(value, f)
 
 
-def _run_isolated(function, example, tatt, high_accuracy=False):
+def _run_isolated(function, example, tatt, high_accuracy=False, knob=None):
     """Spawn one worker subprocess and hand back its result.
 
     Arguments:
@@ -830,7 +934,7 @@ def _run_isolated(function, example, tatt, high_accuracy=False):
     completed = subprocess.run(
         [sys.executable, "-c", _WORKER_DRIVER, _THIS_FILE, function,
          example, "1" if tatt else "0", "1" if high_accuracy else "0",
-         "0", result_path],
+         knob or "", result_path],
         env=environment)
     try:
         if completed.returncode != 0:
@@ -846,7 +950,7 @@ def _run_isolated(function, example, tatt, high_accuracy=False):
             os.unlink(result_path)
 
 
-def single_model_chi2(example, tatt, high_accuracy=False):
+def single_model_chi2(example, tatt, high_accuracy=False, knob=None):
     """chi2 of the frozen fiducial point, evaluated in a fresh worker.
 
     This is the quantity the reference tests compare against the
@@ -865,9 +969,10 @@ def single_model_chi2(example, tatt, high_accuracy=False):
     """
     if os.environ.get(_WORKER_FLAG) == "1":
         return _single_model_chi2_impl(example, tatt,
-                                       high_accuracy=high_accuracy)
+                                       high_accuracy=high_accuracy,
+                                       knob=knob)
     return float(_run_isolated("single", example, tatt,
-                               high_accuracy=high_accuracy))
+                               high_accuracy=high_accuracy, knob=knob))
 
 
 def ten_in_a_row_chi2(example, tatt):

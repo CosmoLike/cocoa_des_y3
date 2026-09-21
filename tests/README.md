@@ -5,12 +5,16 @@ because code or data changed by accident, and a race condition (a bug
 where evaluating several points in a row corrupts a later result
 through leftover internal state or colliding OpenMP threads).
 
-Every model build runs in its own worker subprocess. In this project
-both examples share one data set, so the isolation is preventive: it
-keeps the suite immune to the process abort that different data-set
-dimensions trigger inside cosmolike (des_y3 has that layout), and
-every project keeps one architecture. The commands below stay the
-same.
+The project ships two generations of DES data, and the suite covers
+both: tests 1-14 evaluate the DES-Y3 data (`des_y3_real.dataset`),
+tests 15-26 evaluate the DES-Y1 data (`des_y1_real.dataset`) through
+the same `des_y3.*` likelihood classes.
+
+Every model build runs in its own worker subprocess: the Y1 and Y3
+data sets have different masked dimensions and n(z) table lengths,
+and the cosmolike C layer aborts the whole process when a second
+configuration with different dimensions initializes after the first.
+The isolation is internal; the commands below stay the same.
 
 ## Running the tests
 
@@ -26,13 +30,13 @@ Without pytest:
 The suite changes no project files. Each test streams a progress line
 per model build and per evaluation, then a report block with the
 computed chi2, the stored reference, the difference, and the pass
-limit. A full run performs about 50 likelihood evaluations and takes a
-few minutes. The test modules force `OMP_NUM_THREADS=4` internally.
+limit. A full run performs about 150 likelihood evaluations and takes
+a few minutes. The test modules force `OMP_NUM_THREADS=4` internally.
 The suite never waits for a keypress: a space/enter prompt between
 tests means the output is being piped through a pager such as `less`,
 so run the command with nothing piped after it.
 
-## The eight tests
+## The 24 tests
 
 1. `test_1`: chi2 of the cosmic-shear likelihood at a fixed reference
    point must stay within 0.2 of the value stored in
@@ -45,30 +49,47 @@ so run the command with nothing piped after it.
    (`IA_model: 1`) and `DES_A2_1=0.05`, `DES_BTA_1=0.05`,
    `DES_A2_2=-1.51541`.
 4. `test_4`: same as test 2 with the TATT model.
-5. -8. the same four tests for the 3x2pt likelihood.
+5. -8. the same four tests for the 3x2pt likelihood (example2).
 9. -14. `test_example2_2x2pt.py` (numbered 11-14): the four standard
    tests on `des_y3.combo_2x2pt` (example2 with the probe selection
    reduced to galaxy clustering plus galaxy-galaxy lensing).
+15. -18. `test_example3.py`: the four standard tests for the
+   cosmic-shear likelihood on the DES-Y1 data (example3).
+19. -22. `test_example4.py`: the four standard tests for the 3x2pt
+   likelihood on the DES-Y1 data (example4).
+23. -26. `test_example4_2x2pt.py`: the four standard tests on
+   `des_y3.combo_2x2pt` with the DES-Y1 data (example4 with the
+   probe selection reduced to galaxy clustering plus galaxy-galaxy
+   lensing).
 
-Accuracy checks (`test_accuracy.py`, A1-A6): the three probes with
-both IA models re-evaluated with the numerical settings pushed far
-beyond the defaults (cosmolike accuracyboost 5, integration_accuracy
-10, lmax 200000, kmax_boltzmann 40; CAMB AccuracyBoost 2,
-k_per_logint 50, kmax 50). Each check
-reports delta chi2 = chi2(high accuracy) - chi2(default, frozen), no
-pass/fail. High-accuracy evaluations take minutes; skip the file with
+Accuracy checks (`test_accuracy.py`, A1-A12): the three probes with
+both IA models on both data sets (A1-A6 des_y3, A7-A12 des_y1),
+re-evaluated with the numerical settings pushed far beyond the
+defaults (cosmolike accuracyboost 2, integration_accuracy 10,
+lmax 200000, kmax_boltzmann 40; CAMB AccuracyBoost 2, k_per_logint
+50, kmax 50). Each check reports
+delta chi2 = chi2(high accuracy) - chi2(default, frozen), no
+pass/fail. A one-knob-at-a-time scan on the des_y3 example2 NLA
+configuration runs first, so a large all-knobs delta can be
+attributed to the knob causing it. High-accuracy evaluations take
+minutes; skip the file with
 `--ignore ./projects/des_y3/tests/test_accuracy.py`.
 
-This project's shipped data vector is REAL data, and the example
-cosmology is not its best fit, so the chi2 there sits far from the
-minimum, where it responds linearly to tiny numerical changes. Every
-variant therefore evaluates against a data vector generated at the
-fiducial point during the freeze: `frozen/data/synthetic_des_y3.dataset`
-(default NLA model) for the NLA tests and
-`frozen/data/tatt_des_y3.dataset` (TATT model) for the TATT tests.
-Both come from the example2 (3x2pt) model, whose full-length vector
-serves every probe; at its own minimum the chi2 response is quadratic
-and the drift and accuracy numbers stay meaningful.
+This project's shipped data vectors are REAL data (the DES-Y3 and
+DES-Y1 measurements), and the example cosmology is not a best fit of
+either, so the chi2 there sits far from the minimum, where it
+responds linearly to tiny numerical changes. Every variant therefore
+evaluates against a data vector generated at the fiducial point
+during the freeze, one pair per data set:
+`frozen/data/synthetic_des_y3.dataset` (default NLA model) and
+`frozen/data/tatt_des_y3.dataset` (TATT model) come from the example2
+(3x2pt) model and serve the Y3 tests;
+`frozen/data/synthetic_des_y1.dataset` and
+`frozen/data/tatt_des_y1.dataset` come from the example4 model and
+serve the Y1 tests. Within a data set the full-length 3x2pt vector
+serves every probe (the masks select their sections); at its own
+minimum the chi2 response is quadratic and the drift and accuracy
+numbers stay meaningful.
 
 ## Why the tests keep their own copy of everything
 
@@ -76,15 +97,16 @@ The tests read nothing from the live project: not `../data`, not the
 `EXAMPLE_EVALUATE` yaml files, and not the likelihood default yaml
 files. Instead, `frozen/` holds:
 
-- `frozen_config_example{1,2}.py`: the complete cobaya configuration
-  as a yaml string plus the exact evaluation point. Every option and
-  every parameter is written out, including the ones that normally
-  come from `params_source.yaml` and the other default files, so
-  editing those files cannot change what the tests evaluate.
-- `data/`: the tests' own copy of the data vectors, covariance, n(z),
-  and masks.
-- `EXAMPLE_EVALUATE{1,2}.yaml`: snapshots kept only so a human can
-  diff how the live examples drifted since the freeze.
+- `frozen_config_example*.py`: one module per configuration with the
+  complete cobaya configuration as a yaml string plus the exact
+  evaluation point. Every option and every parameter is written out,
+  including the ones that normally come from `params_source.yaml`
+  and the other default files, so editing those files cannot change
+  what the tests evaluate.
+- `data/`: the tests' own copy of the data vectors, covariances,
+  n(z), and masks of both data sets.
+- `EXAMPLE_EVALUATE{1,2,3,4}.yaml`: snapshots kept only so a human
+  can diff how the live examples drifted since the freeze.
 
 `manifest_sha256.json` stores a SHA-256 hash (a fingerprint that
 changes when any byte changes) of every frozen file. Each test
@@ -101,7 +123,7 @@ or likelihood defaults requires a re-freeze:
     python ./projects/des_y3/tests/generate_frozen_reference.py --overwrite
 
 Run it from the `Cocoa/` folder with the environment set up as above.
-It rebuilds `frozen/` from the current project, prints the four new
+It rebuilds `frozen/` from the current project, prints the twelve new
 reference chi2 values, and rewrites the manifest. Review the printed
 chi2 values against the old references before committing: they define
 what every later test run compares against.
