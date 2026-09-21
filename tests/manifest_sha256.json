@@ -19,8 +19,11 @@
     "frozen/data/des_y3_unblinded_final.txt": "17bdf9c97ad2c207049eb21d3c41a8a18aab9417b1d80dc3bd937f18e1892486",
     "frozen/data/mask_Y1_mcal": "825670518f9c932daf34dd7a9ebe77517fe4f098c15af05becbd08cbd0ba73f6",
     "frozen/data/pca.txt": "c4112d76ff0c258e20a2c9201b469be6a87199671536e46ce6cced967f3f5e59",
-    "frozen/frozen_config_example1.py": "4a318200898b6fddbf5eece491a3cb46ca59981f93b845a8c63d22f7abff8ebf",
-    "frozen/frozen_config_example2.py": "c4140c17a17590b6fe9605e742a907e3ba8ff28de4a5e664813d88eccde56635",
-    "frozen/reference_chi2.json": "cefa8d6396a103e1642fdf0116a7b77d2d47ae7922846392d4b269105d6fe023"
+    "frozen/data/tatt_des_y3.dataset": "440ec8fbdc9eaaf125d9639bca2d679a5876f733475327d8f2ca4d6c8f38c69b",
+    "frozen/data/tatt_des_y3.modelvector": "a157889573624be6319c629c2dc9c82b8c5477054aa34b3937e95ec4f5c2aa29",
+    "frozen/frozen_config_example1.py": "9b65c540223c4bb9bdb23d7fbee21b73a711555f136d5fd4777c7c9d7ca83265",
+    "frozen/frozen_config_example2.py": "401c5f6c7887033073897dc8f14e0f22e755d42ffef3c18f32eded1cf1c9e26e",
+    "frozen/frozen_config_example2_2x2pt.py": "f563faeb66811706a2f49e7a8f2bc5d4b2d33ddfd6b254e2f2e39f19e60865bd",
+    "frozen/reference_chi2.json": "1ff55938e70613d411444dca1357a1e6ca85808ac1d6f7e29c32d180575a3c42"
   }
 }
