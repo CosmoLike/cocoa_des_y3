@@ -75,12 +75,18 @@ The test files and the configurations they cover:
 
 | tests | file | data | configuration |
 |-------|------|------|---------------|
-| 1-4   | `test_example1.py` | DES-Y3 | cosmic shear |
-| 5-8   | `test_example2.py` | DES-Y3 | 3x2pt |
-| 11-14 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`) |
-| 15-18 | `test_example3.py` | DES-Y1 | cosmic shear |
-| 19-22 | `test_example4.py` | DES-Y1 | 3x2pt |
-| 23-26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`) |
+| 1-2 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: NLA |
+| 3-4 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: TATT |
+| 5-6 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: NLA |
+| 7-8 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: TATT |
+| 11-12 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA |
+| 13-14 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT |
+| 15-16 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: NLA |
+| 17-18 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: TATT |
+| 19-20 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: NLA |
+| 21-22 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: TATT |
+| 23-24 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA |
+| 25-26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT |
 
 ### Running Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
 
