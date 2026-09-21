@@ -1,4 +1,4 @@
-# Unit tests for the des_y3 likelihoods
+# Unit tests for the likelihoods
 
 These tests catch two kinds of silent breakage: a $\chi^2$ that drifted
 because code or data changed by accident, and a race condition (a bug
@@ -20,11 +20,11 @@ The isolation is internal; the commands below stay the same.
 
 1. [Running the tests](#run_tests)
 2. [The 24 tests](#the_tests)
-    1. [Running Accuracy checks](#accuracy_checks)
-    2. [Synthetic data vectors](#synthetic_vectors)
-3. [Appendices about the frozen state](#appendix)
-    1. [FAQ: How do the tests keep their own copy of configurations and data?](#frozen_copy)
-    2. [FAQ: How can maintainers refresh the frozen state?](#refreeze)
+    1. [Accuracy checks](#accuracy_checks)
+3. [Appendix](#appendix)
+    1. [FAQ: Do the tests keep their own data?](#frozen_copy)
+    2. [FAQ: Why do the tests use their own data vectors?](#synthetic_vectors)
+    3. [FAQ: How can maintainers refresh the snapshot?](#refreeze)
 
 ## Running the tests <a name="run_tests"></a>
 
@@ -68,46 +68,51 @@ The two checks and their pass limits:
 
 | check | pass limit                                        | a failure means                    |
 |-------|---------------------------------------------------|------------------------------------|
-| $\chi^2$  | within 0.2 of `frozen/reference_chi2.json`        | code or data changed the numbers   |
-| race condition | fresh vs 10th of 10 cosmologies in a row, to $10^{-4}$ | leftover state or an OpenMP race   |
+| $\Delta\chi^2$ | the recomputed $\chi^2$ must stay within 0.2 of the value stored in `frozen/reference_chi2.json` | code or data changed the numbers |
+| race condition | the fiducial evaluated on its own vs evaluated again after nine other cosmologies; the two must agree within $10^{-4}$ | leftover state or an OpenMP race |
+
+Everything the tests compare against lives under `frozen/`: one
+snapshot of configurations, data, and reference values, captured
+together when the references were generated and unchanged since. The
+[Appendix](#appendix) explains how the snapshot is protected.
 
 The test files and the configurations they cover:
 
 | test | file | data | configuration | what it checks |
 |---|---|---|---|---|
-| 1 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: NLA | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 2 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: NLA | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 3 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: TATT | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 4 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: TATT | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 5 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: NLA | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 6 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: NLA | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 7 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: TATT | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 8 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: TATT | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 11 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 12 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 13 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 14 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 15 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: NLA | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 16 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: NLA | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 17 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: TATT | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 18 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: TATT | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 19 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: NLA | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 20 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: NLA | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 21 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: TATT | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 22 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: TATT | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 23 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 24 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
-| 25 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | $\chi^2$ at the frozen fiducial point vs the stored reference |
-| 26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | race condition (OpenMP threading): fresh vs 10th-of-10 evaluation |
+| 1 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: NLA | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 2 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 3 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 4 | `test_example1.py` | DES-Y3 | cosmic shear; IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 5 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: NLA | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 6 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 7 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 8 | `test_example2.py` | DES-Y3 | 3x2pt; IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 11 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 12 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 13 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 14 | `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 15 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: NLA | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 16 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 17 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 18 | `test_example3.py` | DES-Y1 | cosmic shear; IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 19 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: NLA | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 20 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 21 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 22 | `test_example4.py` | DES-Y1 | 3x2pt; IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 23 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 24 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 25 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
+| 26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
 
-### Running Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
+### Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
 
-The three probes with
-both IA models on both data sets (A1-A6 des_y3, A7-A12 des_y1),
-re-evaluated with every setting pushed far beyond the defaults at
-once. A one-knob-at-a-time scan on the des_y3 example2 NLA
-configuration runs first, so a large all-knobs delta can be
-attributed to the knob causing it. The all-knobs settings:
+Checks A1-A12 re-evaluate cosmic shear, 3x2pt, and 2x2pt, with NLA
+and TATT, on the DES-Y3 data (A1-A6) and on the DES-Y1 data
+(A7-A12), with every setting pushed far beyond the defaults at
+once. Before them, we change one accuracy parameter at a time on
+the DES-Y3 3x2pt NLA configuration, so a large $\Delta\chi^2$ can
+be attributed to the parameter causing it. The settings:
 
 | setting | raised to | what it controls |
 |---------|-----------|------------------|
@@ -115,13 +120,18 @@ attributed to the knob causing it. The all-knobs settings:
 | `integration_accuracy` (cosmolike) | 10 | extra refinement passes of cosmolike's numerical integrals |
 | `lmax` (cosmolike) | 200000 | highest multipole of the internal harmonic-space $C_\ell$ tables that cosmolike transforms into the real-space correlation functions; arcminute scales need very high $\ell$ |
 | `kmax_boltzmann` (cosmolike) | 40 | the k cutoff of the power spectrum the likelihood requests from CAMB |
-| `AccuracyBoost` (CAMB) | 2 | CAMB's overall accuracy multiplier: denser sampling in every internal CAMB grid, the most expensive knob |
+| `AccuracyBoost` (CAMB) | 2 | CAMB's overall accuracy multiplier: denser sampling in every internal CAMB grid, the most expensive setting |
 | `k_per_logint` (CAMB) | 50 | k samples CAMB computes per logarithmic interval of the transfer functions |
 | `kmax` (CAMB) | 50 | highest k of CAMB's matter power spectrum; one physical cutoff with `kmax_boltzmann`, seen from the CAMB side |
 
-Each check reports $\Delta\chi^2 = \chi^2(\text{high accuracy}) -
-\chi^2(\text{default})$: the numerical error of the default
-settings. No pass/fail; high-accuracy evaluations take minutes.
+Each check reports the $\Delta\chi^2$ between the high-accuracy and
+the default evaluations: the numerical error of the default
+settings. No pass/fail.
+
+> [!NOTE]
+> High-accuracy evaluations take minutes.
+
+#### Running Accuracy checks <a name="run_accuracy"></a>
 
 We assume users are in the Conda cocoa environment from a previous
 `conda activate cocoa` command, that the shell is bash, and that the
@@ -140,28 +150,9 @@ To run every other test while skipping these:
 
     python -m pytest ./projects/des_y3/tests --ignore ./projects/des_y3/tests/test_accuracy.py
 
-### Synthetic data vectors <a name="synthetic_vectors"></a>
+# Appendix <a name="appendix"></a>
 
-This project's shipped data vectors are REAL data (the DES-Y3 and
-DES-Y1 measurements), and the example cosmology is not a best fit of
-either, so the $\chi^2$ there sits far from the minimum, where it
-responds linearly to tiny numerical changes. Every variant therefore
-evaluates against a data vector generated at the fiducial point
-during the freeze, one pair per data set:
-
-| data | NLA vector | TATT vector | generated from |
-|------|-----------|-------------|----------------|
-| DES-Y3 | `frozen/data/synthetic_des_y3.dataset` | `frozen/data/tatt_des_y3.dataset` | the example2 (3x2pt) model |
-| DES-Y1 | `frozen/data/synthetic_des_y1.dataset` | `frozen/data/tatt_des_y1.dataset` | the example4 model |
-
-Within a data set the full-length 3x2pt vector serves every probe
-(the masks select their sections); at its own minimum the $\chi^2$
-response is quadratic and the drift and accuracy numbers stay
-meaningful.
-
-# Appendices about the frozen state <a name="appendix"></a>
-
-## :interrobang: FAQ: How do the tests keep their own copy of configurations and data? <a name="frozen_copy"></a>
+## :interrobang: FAQ: Do the tests keep their own data? <a name="frozen_copy"></a>
 
 The tests read nothing from the live project: not `../data`, not the
 `EXAMPLE_EVALUATE` yaml files, and not the likelihood default yaml
@@ -180,13 +171,32 @@ files cannot change what the tests evaluate.
 
 
 `manifest_sha256.json` stores a SHA-256 hash (a fingerprint that
-changes when any byte changes) of every frozen file. Each test
-verifies the manifest first and refuses to run when a frozen file was
+changes when any byte changes) of every file under `frozen/`. Each test
+verifies the manifest first and refuses to run when a file under `frozen/` was
 edited, naming the file. The result: users may change the live data
-and examples freely, and nobody can quietly edit the frozen state
+and examples freely, and nobody can quietly edit the snapshot
 either.
 
-## :interrobang: FAQ: How can maintainers refresh the frozen state? <a name="refreeze"></a>
+## :interrobang: FAQ: Why do the tests use their own data vectors? <a name="synthetic_vectors"></a>
+
+This project's shipped data vectors are real data (the DES-Y3 and
+DES-Y1 measurements), and the example cosmology is not a best fit of
+either, so the $\chi^2$ there sits far from the minimum, where it
+responds linearly to tiny numerical changes. Every variant therefore
+evaluates against a data vector generated at the fiducial point
+when the snapshot was created, one pair per data set:
+
+| data | NLA vector | TATT vector | generated from |
+|------|-----------|-------------|----------------|
+| DES-Y3 | `frozen/data/synthetic_des_y3.dataset` | `frozen/data/tatt_des_y3.dataset` | the 3x2pt model |
+| DES-Y1 | `frozen/data/synthetic_des_y1.dataset` | `frozen/data/tatt_des_y1.dataset` | the DES-Y1 3x2pt model |
+
+Within a data set the full-length 3x2pt vector serves every probe
+(the masks select their sections); at its own minimum the $\chi^2$
+response is quadratic and the drift and accuracy numbers stay
+meaningful.
+
+## :interrobang: FAQ: How can maintainers refresh the snapshot? <a name="refreeze"></a>
 
 A deliberate change to the data vectors, n(z), covariance, examples,
 or likelihood defaults requires a re-freeze.
@@ -200,7 +210,7 @@ the script `start_cocoa.sh`
 
     source start_cocoa.sh
 
-**Step :two:**: rebuild the frozen state
+**Step :two:**: rebuild the snapshot
 
     python ./projects/des_y3/tests/generate_frozen_reference.py --overwrite
 
