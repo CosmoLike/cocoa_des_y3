@@ -20,7 +20,7 @@ Contents:
 
 1. [Running the tests](#run_tests)
 2. [The 24 tests](#the_tests)
-    1. [Accuracy checks](#accuracy_checks)
+    1. [Running Accuracy checks](#accuracy_checks)
     2. [Synthetic data vectors](#synthetic_vectors)
 3. [Tests keep their own copy of configurations and data](#frozen_copy)
 4. [Refreshing the frozen state (maintainers only)](#refreeze)
@@ -85,7 +85,7 @@ The test files and the configurations they cover:
 | 19-22 | `test_example4.py` | DES-Y1 | 3x2pt (example4) |
 | 23-26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`) |
 
-### Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
+### Running Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
 
 The three probes with
 both IA models on both data sets (A1-A6 des_y3, A7-A12 des_y1),
@@ -106,8 +106,14 @@ attributed to the knob causing it. The all-knobs settings:
 
 Each check reports $\Delta\chi^2 = \chi^2(\text{high accuracy}) -
 \chi^2(\text{default})$: the numerical error of the default
-settings. No pass/fail. High-accuracy evaluations take minutes; run
-the file on its own, or skip it with
+settings. No pass/fail; high-accuracy evaluations take minutes.
+
+**Step :one:**: with the environment of
+[Running the tests](#run_tests), run the accuracy checks on their own
+
+    python -m pytest ./projects/des_y3/tests/test_accuracy.py
+
+To run every other test while skipping these:
 
     python -m pytest ./projects/des_y3/tests --ignore ./projects/des_y3/tests/test_accuracy.py
 
