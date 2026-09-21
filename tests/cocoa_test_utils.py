@@ -19,7 +19,8 @@ des_y3_real.dataset; the DES-Y1 configurations (example3, example4,
 example4_2x2pt: the same three probes) evaluate des_y1_real.dataset,
 an earlier data release with its own data vector, covariance, masks,
 and n(z) tables. The same des_y3.* likelihood classes serve both
-generations: only the dataset descriptor and the evaluation point
+generations: only the ".dataset" file (the small text file listing
+which data files the likelihood reads) and the evaluation point
 change between a Y3 configuration and its Y1 twin.
 
 Everything a test evaluates is FROZEN: stored under tests/frozen/ and
@@ -41,8 +42,9 @@ tests. The frozen state has three parts:
   - frozen/data/: the tests' own copy of the data vectors,
     covariances, n(z), and masks of both data sets.
   - frozen/EXAMPLE_EVALUATE{1,2,3,4}.yaml: snapshots of the example
-    yaml files at freeze time, kept only so a human can diff how the
-    live examples drifted; no test reads them.
+    yaml files at freeze time, kept only so a human can see
+    what changed in the live examples since the freeze; no test
+    reads them.
 
 Every model build runs in its own worker subprocess: the public
 single_model_chi2 and ten_in_a_row_chi2 spawn a fresh python that
@@ -107,8 +109,9 @@ TATT_POINT = {
 # The TATT variants evaluate against a data vector GENERATED WITH
 # TATT at the fiducial point. Reason: against an NLA-based vector the
 # TATT chi2 sits away from its minimum, where it responds linearly
-# (not quadratically) to tiny numerical changes, making drift bounds
-# twitchy. The Y3 and Y1 configurations use different data sets, so
+# (not quadratically) to tiny numerical changes: harmless
+# rounding-level shifts would then eat much of the 0.2 chi2 band the
+# reference tests allow. The Y3 and Y1 configurations use different data sets, so
 # each data set gets its own generated vector, from its 3x2pt example;
 # within a data set the full-length vector serves every probe (the
 # other probes' masks select their sections).
@@ -121,13 +124,13 @@ TATT_GENERATORS = {
 # DES-Y1 measurements), and the example cosmology is not a best fit
 # of either: the chi2 sits far from the minimum (hundreds to
 # thousands), where it responds LINEARLY to tiny theory changes. A
-# drift or accuracy check evaluated there reports alarming shifts
-# that say nothing about the numerics near a fit. The NLA variants
+# chi2 comparison evaluated there reports alarming shifts that say
+# nothing about the numerics near a fit. The NLA variants
 # therefore evaluate against SYNTHETIC data vectors, generated with
 # the default (NLA) model at the fiducial point during the freeze,
 # one per data set, exactly like the TATT vectors: at its own minimum
 # the chi2 response is quadratic and stable.
-# Every generated vector: {descriptor name: (source example, TATT?)}.
+# Every generated vector: {".dataset" filename: (source example, TATT?)}.
 SYNTHETIC_VECTORS = {
     "synthetic_des_y3.dataset": ("example2", False),
     "tatt_des_y3.dataset": ("example2", True),
@@ -681,7 +684,7 @@ def load_frozen_point(example):
 
 
 def build_point(model, example, tatt):
-    """Assemble the exact point a test evaluates, with a drift check.
+    """Assemble the exact point a test evaluates, with a safety check.
 
     The frozen point must cover the model's sampled parameters one to
     one. When likelihood or theory code changes its parameter set (a
@@ -797,8 +800,11 @@ def _single_model_chi2_impl(example, tatt, high_accuracy=False,
     info = load_frozen_info(example, tatt, high_accuracy=high_accuracy,
                             overrides=overrides)
     model = make_model(info)
-    # build_point returns the frozen evaluation point, cross-checked
-    # against the model's sampled-parameter set (drift fails loudly)
+    # build_point returns the frozen evaluation point after checking
+    # that the point and the model name the same sampled parameters:
+    # if the likelihood or theory code gained or lost a sampled
+    # parameter since the freeze, the mismatch is reported by name
+    # instead of failing deep inside cobaya
     point = build_point(model, example, tatt)
     print("  evaluating the fiducial point ...", flush=True)
     return evaluate_chi2(model, point)
