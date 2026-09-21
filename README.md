@@ -388,7 +388,7 @@ to new models, extended ranges, or higher precision.
 Similarly, we use networks to generalize the *syren-Halofit* LCDM nonlinear 
 boost fit (Eq. 11 of [arXiv:2402.17492](https://arxiv.org/abs/2402.17492)).
 
-## Unit tests <a name="des_y3_unit_tests"></a>
+# Unit tests <a name="des_y3_unit_tests"></a>
 
 The `tests/` folder holds 24 pass/fail tests. They cover six
 configurations: cosmic shear, 3x2pt, and 2x2pt, each evaluated on the
@@ -410,7 +410,7 @@ folder, cocoa environment active, `start_cocoa.sh` sourced):
 [tests/README.md](tests/README.md) lists every test and the procedure
 that refreshes the frozen state.
 
-## Minimum accuracy parameters <a name="des_y3_minimum_accuracy"></a>
+# Minimum accuracy parameters <a name="des_y3_minimum_accuracy"></a>
 
 The advisory checks in `tests/test_accuracy.py` measure the numerical
 error of the example defaults (`accuracyboost: 1.0`,
