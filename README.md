@@ -412,46 +412,17 @@ that refreshes the snapshot.
 
 # Minimum accuracy parameters <a name="des_y3_minimum_accuracy"></a>
 
-The advisory checks in `tests/test_accuracy.py` measure the numerical
-error of the example defaults (`accuracyboost: 1.0`,
-`integration_accuracy: 0`, `lmax: 50000`, `kmax_boltzmann: 5.0`, CAMB
-`AccuracyBoost: 1.05`, `k_per_logint: 10`): each configuration is
-re-evaluated at its reference point with every setting pushed far beyond
-the defaults (cosmolike `accuracyboost: 3`, `integration_accuracy:
-10`, ``lmax: 200000``, ``kmax_boltzmann: 40``; CAMB `AccuracyBoost: 2`,
-`k_per_logint: 50`, `kmax: 50`), and the $\Delta\chi^2$
-between the high-accuracy and the default evaluations is reported.
-The target is $\lvert\Delta\chi^2\rvert$ below 0.2, the bound the
-reference tests use.
-Values measured when the snapshot was created (2026-09-21):
-
-| check | configuration                        | $\Delta\chi^2$ |
-|-------|--------------------------------------|-----------:|
-| A1    | DES-Y3 cosmic shear, NLA  |  -0.000029 |
-| A2    | DES-Y3 cosmic shear, TATT |  -0.000033 |
-| A3    | DES-Y3 2x2pt, NLA   |  +0.003159 |
-| A4    | DES-Y3 2x2pt, TATT  |  +0.003293 |
-| A5    | DES-Y3 3x2pt, NLA         |  +0.004083 |
-| A6    | DES-Y3 3x2pt, TATT        |  +0.004226 |
-| A7    | DES-Y1 cosmic shear, NLA  |  +0.000023 |
-| A8    | DES-Y1 cosmic shear, TATT |  +0.000023 |
-| A9    | DES-Y1 2x2pt, NLA   |  +0.001330 |
-| A10   | DES-Y1 2x2pt, TATT  |  +0.001326 |
-| A11   | DES-Y1 3x2pt, NLA         |  +0.001383 |
-| A12   | DES-Y1 3x2pt, TATT        |  +0.001380 |
-
-Changing one accuracy parameter at a time on the DES-Y3 3x2pt NLA
-configuration:
-
-| setting                                  | $\Delta\chi^2$ |
-|------------------------------------------|-----------:|
-| `accuracyboost: 3`                       |  +0.000084 |
-| `accuracyboost: 5` (stress)              |  +0.000535 |
-| `integration_accuracy: 10`               |  +0.003724 |
-| `lmax: 200000`                           |  +0.000087 |
-| `kmax_boltzmann: 40` + CAMB `kmax: 50`   |  +0.000014 |
-| CAMB `AccuracyBoost: 2`                  |  +0.000262 |
-| CAMB `k_per_logint: 50`                  |  +0.000188 |
+The advisory checks in `tests/test_accuracy.py` measure the
+numerical error of the default accuracy settings: each setting is
+raised one at a time on the DES-Y3 3x2pt configuration, so a large
+$\Delta\chi^2$ can be attributed to the setting causing it, and
+then every setting at once. Each check prints the $\Delta\chi^2$
+between the high-accuracy and the default evaluations. The measured
+values sit far below the 0.2 band the reference tests allow, so the
+shipped defaults are adequate. The values are not quoted here: rerun
+the checks to measure them on the current code, and see
+[tests/README.md](tests/README.md) for each check, the settings
+raised, and what each setting controls.
 
 `accuracyboost` refines a nested z grid in the power-spectrum
 tables: every coarser grid's nodes are a subset of every finer
@@ -459,14 +430,9 @@ grid's, so a higher boost tightens the same interpolation instead of
 moving the nodes (the construction is commented in
 `likelihood/_cosmolike_prototype_base.py`).
 
-Every measured $\lvert\Delta\chi^2\rvert$ is below 0.005, forty times smaller
-than the 0.2 target, so the shipped des_y3 defaults are adequate for
-both the DES-Y3 and the DES-Y1 data.
-
-When a future change moves several settings' $\Delta\chi^2$ values at once, raise the
-cosmolike `accuracyboost` first (cheap at run time), then CAMB
-`k_per_logint`, and only then CAMB `AccuracyBoost` (expensive at run
-time): unresolved cosmolike-side integration shows up as an apparent
-CAMB sensitivity, so the cheap settings must be settled before the
-expensive one is blamed. `kmax_boltzmann` and CAMB `kmax` are one
-physical cutoff seen from the two sides; move them together.
+When several settings move the $\chi^2$, settle them in cost order:
+raise cosmolike `accuracyboost` first (cheap), then CAMB
+`k_per_logint`, and CAMB `AccuracyBoost` last (expensive at run
+time, and able to masquerade for the cheap settings).
+`kmax_boltzmann` and CAMB `kmax` are one physical cutoff seen from
+two sides; move them together.
