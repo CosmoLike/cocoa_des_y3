@@ -417,7 +417,7 @@ error of the example defaults (`accuracyboost: 1.0`,
 `integration_accuracy: 0`, `lmax: 50000`, `kmax_boltzmann: 5.0`, CAMB
 `AccuracyBoost: 1.05`, `k_per_logint: 10`): each configuration is
 re-evaluated at its reference point with every knob pushed far beyond
-the defaults (cosmolike `accuracyboost: 2`, `integration_accuracy:
+the defaults (cosmolike `accuracyboost: 3`, `integration_accuracy:
 10`, `lmax: 200000`, `kmax_boltzmann: 40`; CAMB `AccuracyBoost: 2`,
 `k_per_logint: 50`, `kmax: 50`), and the difference
 `delta chi2 = chi2(high accuracy) - chi2(default)` is reported. The
@@ -427,31 +427,37 @@ Values measured at the freeze of 2026-09-21:
 | check | configuration                        | delta chi2 |
 |-------|--------------------------------------|-----------:|
 | A1    | des_y3 cosmic shear (example1), NLA  |  -0.000029 |
-| A2    | des_y3 cosmic shear (example1), TATT |  -0.000032 |
-| A3    | des_y3 2x2pt (example2_2x2pt), NLA   |  +0.002697 |
-| A4    | des_y3 2x2pt (example2_2x2pt), TATT  |  +0.002829 |
-| A5    | des_y3 3x2pt (example2), NLA         |  +0.003467 |
-| A6    | des_y3 3x2pt (example2), TATT        |  +0.003607 |
-| A7    | des_y1 cosmic shear (example3), NLA  |  +0.000025 |
-| A8    | des_y1 cosmic shear (example3), TATT |  +0.000026 |
-| A9    | des_y1 2x2pt (example4_2x2pt), NLA   |  +0.001349 |
-| A10   | des_y1 2x2pt (example4_2x2pt), TATT  |  +0.001345 |
-| A11   | des_y1 3x2pt (example4), NLA         |  +0.001399 |
-| A12   | des_y1 3x2pt (example4), TATT        |  +0.001395 |
+| A2    | des_y3 cosmic shear (example1), TATT |  -0.000033 |
+| A3    | des_y3 2x2pt (example2_2x2pt), NLA   |  +0.003159 |
+| A4    | des_y3 2x2pt (example2_2x2pt), TATT  |  +0.003293 |
+| A5    | des_y3 3x2pt (example2), NLA         |  +0.004083 |
+| A6    | des_y3 3x2pt (example2), TATT        |  +0.004226 |
+| A7    | des_y1 cosmic shear (example3), NLA  |  +0.000023 |
+| A8    | des_y1 cosmic shear (example3), TATT |  +0.000023 |
+| A9    | des_y1 2x2pt (example4_2x2pt), NLA   |  +0.001330 |
+| A10   | des_y1 2x2pt (example4_2x2pt), TATT  |  +0.001326 |
+| A11   | des_y1 3x2pt (example4), NLA         |  +0.001383 |
+| A12   | des_y1 3x2pt (example4), TATT        |  +0.001380 |
 
 One knob at a time on the des_y3 3x2pt (example2, NLA) configuration:
 
 | knob                                     | delta chi2 |
 |------------------------------------------|-----------:|
-| `accuracyboost: 2`                       |  +0.000517 |
-| `accuracyboost: 5` (stress)              |  +0.001395 |
+| `accuracyboost: 3`                       |  +0.000084 |
+| `accuracyboost: 5` (stress)              |  +0.000535 |
 | `integration_accuracy: 10`               |  +0.003724 |
 | `lmax: 200000`                           |  +0.000087 |
 | `kmax_boltzmann: 40` + CAMB `kmax: 50`   |  +0.000014 |
 | CAMB `AccuracyBoost: 2`                  |  +0.000262 |
 | CAMB `k_per_logint: 50`                  |  +0.000188 |
 
-Every measured `|delta chi2|` is below 0.004, fifty times smaller
+`accuracyboost` refines a nested z grid in the power-spectrum
+tables: every coarser grid's nodes are a subset of every finer
+grid's, so a higher boost tightens the same interpolation instead of
+moving the nodes (the construction is commented in
+`likelihood/_cosmolike_prototype_base.py`).
+
+Every measured `|delta chi2|` is below 0.005, forty times smaller
 than the 0.2 target, so the shipped des_y3 defaults are adequate for
 both the DES-Y3 and the DES-Y1 data.
 
