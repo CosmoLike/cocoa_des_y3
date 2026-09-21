@@ -40,8 +40,12 @@ so run the command with nothing piped after it.
 
 The standard configurations get four tests each: a $\chi^2$ drift check
 and a race check, both in the NLA and in the TATT intrinsic-alignment
-model (TATT: `IA_model: 1` with `DES_A2_1=0.05`, `DES_BTA_1=0.05`,
-`DES_A2_2=-1.51541`).
+model. The TATT variants set
+
+    IA_model: 1
+    DES_A2_1: 0.05
+    DES_BTA_1: 0.05
+    DES_A2_2: -1.51541
 
 | check | pass limit                                        | a failure means                    |
 |-------|---------------------------------------------------|------------------------------------|
@@ -59,16 +63,27 @@ model (TATT: `IA_model: 1` with `DES_A2_1=0.05`, `DES_BTA_1=0.05`,
 
 Accuracy checks (`test_accuracy.py`, A1-A12): the three probes with
 both IA models on both data sets (A1-A6 des_y3, A7-A12 des_y1),
-re-evaluated with the numerical settings pushed far beyond the
-defaults (cosmolike `accuracyboost: 2`, `integration_accuracy: 10`,
-`lmax: 200000`, `kmax_boltzmann: 40`; CAMB `AccuracyBoost: 2`, k_per_logint
-50, `kmax: 50`). Each check reports
-$\Delta\chi^2 = \chi^2(\text{high accuracy}) - \chi^2(\text{default})$, no
-pass/fail. A one-knob-at-a-time scan on the des_y3 example2 NLA
+re-evaluated with every setting pushed far beyond the defaults at
+once. A one-knob-at-a-time scan on the des_y3 example2 NLA
 configuration runs first, so a large all-knobs delta can be
-attributed to the knob causing it. High-accuracy evaluations take
-minutes; skip the file with
-`--ignore ./projects/des_y3/tests/test_accuracy.py`.
+attributed to the knob causing it. The all-knobs settings:
+
+    # cosmolike likelihood settings
+    accuracyboost: 2
+    integration_accuracy: 10
+    lmax: 200000
+    kmax_boltzmann: 40
+    # CAMB extra_args (kmax moves with kmax_boltzmann: one physical cutoff)
+    AccuracyBoost: 2
+    k_per_logint: 50
+    kmax: 50
+
+Each check reports $\Delta\chi^2 = \chi^2(\text{high accuracy}) -
+\chi^2(\text{default})$: the numerical error of the default
+settings. No pass/fail. High-accuracy evaluations take minutes; run
+the file on its own, or skip it with
+
+    python -m pytest ./projects/des_y3/tests --ignore ./projects/des_y3/tests/test_accuracy.py
 
 This project's shipped data vectors are REAL data (the DES-Y3 and
 DES-Y1 measurements), and the example cosmology is not a best fit of
