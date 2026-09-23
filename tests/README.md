@@ -169,18 +169,18 @@ the table below is this project's own measurement:
 
 ![The 30 comparison points, colored by the per-point difference](cfastpt_vs_fastpt_points.png)
 
-The same sweep on the 3x2pt likelihood (test 28, 2026-09-23)
-measures max $\Delta\chi^2 = 0.0010$ at the defaults and
-$0.000013$ at the pushed camb/cosmolike settings; on the 2x2pt
-likelihood (test 29, 2026-09-23) it measures $0.00010$ and
-$0.000001$, the mildest of the three, with the TATT tables entering
-through galaxy-galaxy lensing alone.
+Measured on 2026-09-23:
 
-Under the all-ones mask (`--mask=ones`, 2026-09-23: no scale cuts,
-all 900 points weighted) every sweep still passes: cosmic shear
-measures max $\Delta\chi^2 = 0.055$ at the default camb/cosmolike
-settings, 3x2pt 0.062, and 2x2pt 0.011; at the pushed settings
-they fall to 0.00004, 0.00006, and 0.00003.
+- Test 28 (3x2pt): max $\Delta\chi^2 = 0.0010$ at the defaults,
+  $0.000013$ at the pushed camb/cosmolike settings.
+- Test 29 (2x2pt): $0.00010$ and $0.000001$, the mildest of the
+  three, with the TATT tables entering through galaxy-galaxy
+  lensing alone.
+- `--mask=ones` (no scale cuts, all 900 points weighted): every
+  sweep still passes. Cosmic shear measures max
+  $\Delta\chi^2 = 0.055$ at the default camb/cosmolike settings,
+  3x2pt 0.062, and 2x2pt 0.011; at the pushed settings they fall
+  to 0.00004, 0.00006, and 0.00003.
 
 The default-settings values are insensitive to the FAST-PT boosts
 (cosmic shear's 0.055 is fifty-seven times its baseline-mask
@@ -249,10 +249,14 @@ comparison sweeps applies: `--mask=frozen` (the default) weights the
 difference with the contract mask, `--mask=ones` with every data
 point kept (no scale cuts).
 
-Under the frozen mask (2026-09-23) NL1 measures max
-$\Delta\chi^2 = 11.5$, median $1.4$; NL2 measures max $53.0$,
-median $6.0$. Under the all-ones mask (2026-09-23) NL1 measures max
-$21.5$, median $2.4$; NL2 measures max $243.0$, median $42.6$.
+Measured on 2026-09-23 (the figure below, frozen mask):
+
+- NL1 (cosmic shear): max $\Delta\chi^2 = 11.5$, median $1.4$;
+  max $21.5$, median $2.4$ under `--mask=ones`.
+- NL2 (3x2pt): max $53.0$, median $6.0$; max $243.0$, median
+  $42.6$ under `--mask=ones`.
+
+![The ten cosmologies, colored by the Halofit-vs-EE2 difference](halofit_vs_ee2_points.png)
 
 #### Running the Halofit vs EE2 checks <a name="run_halofit_ee2"></a>
 
