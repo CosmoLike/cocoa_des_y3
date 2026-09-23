@@ -20,9 +20,10 @@ The isolation is internal; the commands below stay the same.
 
 1. [Running the tests](#run_tests)
 2. [The 24 tests](#the_tests)
-    1. [Accuracy checks](#accuracy_checks)
-    2. [Baryonic feedback accuracy checks](#baryon_accuracy_checks)
-    3. [Baryonic feedback drift tests](#baryon_drift_tests)
+    1. [The CFASTPT vs FASTPT comparison](#cfastpt_fastpt)
+    2. [Accuracy checks](#accuracy_checks)
+    3. [Baryonic feedback accuracy checks](#baryon_accuracy_checks)
+    4. [Baryonic feedback drift tests](#baryon_drift_tests)
 3. [Appendix](#appendix)
     1. [FAQ: Do the tests keep their own data?](#frozen_copy)
     2. [FAQ: Why do the tests use their own data vectors?](#synthetic_vectors)
@@ -106,6 +107,73 @@ The test files and the configurations they cover:
 | 24 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
 | 25 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
 | 26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
+| 27 | `test_fastpt.py` | cosmic shear; IA modeling: TATT; the C cfastpt (`IA_code: 0`) vs the python FAST-PT package (`IA_code: 1`) at 30 fixed points (20 across the intrinsic-alignment prior plus a one-parameter-at-a-time family), cosmology at the fiducial | $\Delta\chi^2$ of the FAST-PT data vector against the cfastpt data vector at the same point; the cfastpt vector is that point's fiducial, so agreement means zero |
+
+### The CFASTPT vs FASTPT comparison (`test_fastpt.py`, test 27) <a name="cfastpt_fastpt"></a>
+
+Cosmolike computes the TATT perturbation-theory integrals with two
+implementations: cfastpt, the C code built into the interface
+(`IA_code: 0`), and the python FAST-PT package through the fastpt
+theory block (`IA_code: 1`). Test 27 evaluates both at the same 30
+fixed points: 20 drawn once across the intrinsic-alignment prior and
+hard-coded, plus a one-parameter-at-a-time family that names the TATT
+parameter driving a divergence (every other parameter stays at the
+fiducial), each implementation in its own subprocess.
+
+At every point the cfastpt data vector is the fiducial: the reported
+quantity is the $\Delta\chi^2$ of the FAST-PT vector against it,
+zero for identical vectors and quadratic in their difference. A
+comparison against the shipped data vector would measure the slope
+of the distance to the data instead of the numerics.
+
+The FAST-PT side runs at the recommended minimum settings the
+example yamls carry in their commented fastpt block, and the pass
+limit is 0.2. A second FAST-PT evaluation at a doubled grid boost
+repeats the measurement as an advisory. The point values, the
+design, and the parameter attribution are shared with the lsst_y1
+project (its tests/README.md carries the figures and the full
+discussion); the convergence below is this project's own sweep:
+
+| FAST-PT grid boost | max $\Delta\chi^2$ | median $\Delta\chi^2$ | cost per cosmology |
+|---|---|---|---|
+| 1 (shipped default) | 4.32 | 0.128 | 1.0 s |
+| 20 | 0.238 | 0.0065 | 1.2 s |
+| 40 (recommended minimum) | 0.078 | 0.0020 | 1.6 s |
+| 80 | 0.026 | 0.00055 | 2.3 s |
+| 160 | 0.009 | 0.00015 | 2.7 s |
+
+> [!Warning]
+> Do not lower the fastpt `accuracyboost` below 40 in a
+> TATT analysis with `IA_code: 1`: the tidal-torquing and
+> $b_{\rm TA}$ convolution terms are under-resolved at the shipped
+> grid. Production analyses use cfastpt (`IA_code: 0`), the
+> converged and faster reference.
+
+#### Running the comparison <a name="run_cfastpt_fastpt"></a>
+
+We assume users are in the Conda cocoa environment from a previous
+`conda activate cocoa` command, that the shell is bash, and that the
+current folder is the cocoa main folder `cocoa/Cocoa`.
+
+**Step :one:**: activate the private Python environment by sourcing
+the script `start_cocoa.sh`
+
+    source start_cocoa.sh
+
+**Step :two:**: run the comparison at the default camb/cosmolike
+settings
+
+    python -m pytest ./projects/des_y3/tests/test_fastpt.py
+
+**Step :three:**: repeat it at the pushed camb/cosmolike settings
+
+    python -m pytest ./projects/des_y3/tests/test_fastpt.py --high=1
+
+> [!NOTE]
+> `--high=1`: applies the pushed camb/cosmolike settings of the
+> accuracy checks to every block of test 27 (the other tests do not
+> read it). The full comparison is both invocations.
+
 
 ### Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
 
