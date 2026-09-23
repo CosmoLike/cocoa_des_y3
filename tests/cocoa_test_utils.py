@@ -241,6 +241,11 @@ BARYON_POINT_OVERRIDES = _cct.BARYON_POINT_OVERRIDES
 # sampled-parameter prefix; the values are identical in every project.
 FASTPT_COMPARISON_POINTS = _cct.fastpt_comparison_points("DES")
 
+# The ten Halofit-vs-EE2 comparison cosmologies (checks NL1-NL2); the
+# parameters are cosmology-level (omegam/ns/As, no project prefix), so
+# the list is shared verbatim by every project.
+NONLINEAR_COMPARISON_POINTS = _cct.NONLINEAR_COMPARISON_POINTS
+
 # ---- the harness -----------------------------------------------------------
 
 # ONE instance binds the shared machinery to this project's data;
@@ -255,6 +260,7 @@ _H = _cct.CocoaTestHarness(
     fastpt_low_settings=FASTPT_LOW_SETTINGS,
     fastpt_high_settings=FASTPT_HIGH_SETTINGS,
     fastpt_points=FASTPT_COMPARISON_POINTS,
+    fastpt_masks=("frozen", "ones"),
 )
 
 # ---- module functions re-exported from the core (no project state) ----------
@@ -272,6 +278,7 @@ report_race_test = _cct.report_race_test
 report_accuracy = _cct.report_accuracy
 report_knob = _cct.report_knob
 report_fastpt_comparison = _cct.report_fastpt_comparison
+report_nonlinear_comparison = _cct.report_nonlinear_comparison
 
 # ---- bound methods of the harness (the machinery, project-bound) ------------
 compute_manifest = _H.compute_manifest
@@ -295,3 +302,7 @@ _fastpt_comparison_info = _H._fastpt_comparison_info
 _fastpt_comparison_block = _H._fastpt_comparison_block
 _run_fastpt_comparison_worker = _H._run_fastpt_comparison_worker
 cfastpt_vs_fastpt_chi2s = _H.cfastpt_vs_fastpt_chi2s
+# the nonlinear-comparison worker child re-execs
+# u._nonlinear_comparison_block by name, so the re-export is load-bearing
+_nonlinear_comparison_block = _H._nonlinear_comparison_block
+halofit_vs_ee2_dchi2s = _H.halofit_vs_ee2_dchi2s

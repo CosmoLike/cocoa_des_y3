@@ -19,11 +19,13 @@ The isolation is internal; the commands below stay the same.
 # Table of contents
 
 1. [Running the tests](#run_tests)
-2. [The 24 tests](#the_tests)
+2. [The tests](#the_tests)
     1. [The CFASTPT vs FASTPT comparison](#cfastpt_fastpt)
-    2. [Accuracy checks](#accuracy_checks)
-    3. [Baryonic feedback accuracy checks](#baryon_accuracy_checks)
-    4. [Baryonic feedback drift tests](#baryon_drift_tests)
+    2. [The Halofit vs EE2 checks](#halofit_ee2)
+    3. [The EE2 race test](#ee2_race)
+    4. [Accuracy checks](#accuracy_checks)
+    5. [Baryonic feedback accuracy checks](#baryon_accuracy_checks)
+    6. [Baryonic feedback drift tests](#baryon_drift_tests)
 3. [Appendix](#appendix)
     1. [FAQ: Do the tests keep their own data?](#frozen_copy)
     2. [FAQ: Why do the tests use their own data vectors?](#synthetic_vectors)
@@ -56,7 +58,7 @@ limit.
 A full run performs about 150 likelihood evaluations and takes
 a few minutes. The test files force `OMP_NUM_THREADS=4` internally.
 
-## The 24 tests <a name="the_tests"></a>
+## The tests <a name="the_tests"></a>
 
 The standard configurations get four tests each: a $\chi^2$ drift check
 and a race-condition check, both in the NLA and in the TATT intrinsic-alignment
@@ -107,16 +109,20 @@ The test files and the configurations they cover:
 | 24 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: NLA | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
 | 25 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | $\Delta\chi^2$ against the stored reference at the fiducial point |
 | 26 | `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`); IA modeling: TATT | race condition (OpenMP threading): fiducial alone vs after nine other cosmologies |
-| 27 | `test_fastpt.py` | cosmic shear; IA modeling: TATT; the C cfastpt (`IA_code: 0`) vs the python FAST-PT package (`IA_code: 1`) at 30 fixed points (20 across the intrinsic-alignment prior plus a one-parameter-at-a-time family), cosmology at the fiducial | $\Delta\chi^2$ of the FAST-PT data vector against the cfastpt data vector at the same point; the cfastpt vector is that point's fiducial, so agreement means zero |
+| 27 | `test_fastpt.py` | DES-Y3 | cosmic shear; IA modeling: TATT; the C cfastpt (`IA_code: 0`) vs the python FAST-PT package (`IA_code: 1`) at 30 fixed points (20 across the intrinsic-alignment prior plus a one-parameter-at-a-time family), cosmology at the fiducial | $\Delta\chi^2$ of the FAST-PT data vector against the cfastpt data vector at the same point; the cfastpt vector is that point's fiducial, so agreement means zero |
+| 28 | `test_fastpt.py` | DES-Y3 | 3x2pt; IA modeling: TATT; the same comparison as test 27 on the 3x2pt likelihood (`des_y3.combo_3x2pt`) | the same pass rule as test 27, with the data-vector difference weighted by the 3x2pt masked inverse covariance |
+| 29 | `test_fastpt.py` | DES-Y3 | 2x2pt; IA modeling: TATT; the same comparison as test 27 on the 2x2pt likelihood (`des_y3.combo_2x2pt`) | the same pass rule as test 27; clustering carries no intrinsic alignment, so the TATT tables enter through galaxy-galaxy lensing alone, weighted by the 2x2pt masked inverse covariance |
+| 30 | `test_ee2.py` | DES-Y3 | cosmic shear; IA modeling: NLA; nonlinear $P(k)$ from EE2 (`non_linear_emul: 1`) | race condition (OpenMP threading, including EE2's own threaded compute): fiducial alone vs after nine other cosmologies |
 
-### The CFASTPT vs FASTPT comparison (`test_fastpt.py`, test 27) <a name="cfastpt_fastpt"></a>
+### The CFASTPT vs FASTPT comparison (`test_fastpt.py`, tests 27-29) <a name="cfastpt_fastpt"></a>
 
 Cosmolike computes the TATT perturbation-theory integrals with two
 implementations: cfastpt, the C code built into the interface
 (`IA_code: 0`), and the python FAST-PT package through the fastpt
-theory block (`IA_code: 1`). Test 27 evaluates both at 30
-fixed points across the intrinsic-alignment prior and checks
-their agreement.
+theory block (`IA_code: 1`). Both are evaluated at 30 fixed points
+across the intrinsic-alignment prior and checked for agreement:
+test 27 on cosmic shear, test 28 on the 3x2pt likelihood, test 29
+on the 2x2pt likelihood.
 
 At every point the cfastpt data vector is the fiducial: the reported
 quantity is the $\Delta\chi^2$ of the FAST-PT vector against it,
@@ -132,9 +138,21 @@ with a cubic spline in log k upsampling the terms from one grid
 onto the other.
 
 Both boosts are rebased so 1.0 is the converged configuration. The
-test runs FAST-PT at the defaults with the 0.2 band of the other
+tests run FAST-PT at the defaults with the 0.2 band of the other
 checks as the pass limit; a doubled configuration repeats the
 measurement as an advisory.
+
+In test 28 the TATT terms also enter galaxy-galaxy lensing, and the
+difference is weighted by the 3x2pt masked inverse covariance. The
+frozen configuration fixes the one-loop bias amplitudes
+(`DES_B2_*`) at zero, so the one-loop galaxy-bias tables both
+implementations compute multiply by zero: the sweep scores the
+intrinsic-alignment tables alone, on the wider data vector.
+
+Test 29 repeats the sweep on the 2x2pt likelihood. Clustering
+carries no intrinsic alignment, so there the TATT tables are scored
+through galaxy-galaxy lensing alone, under the 2x2pt masked
+inverse covariance.
 
 > [!NOTE]
 > Before the two-grid upgrade of the fastpt theory block (2026-09)
@@ -152,6 +170,24 @@ the table below is this project's own measurement:
 | 2,048,900 (`accuracyboost: 2`) | 1,300 (`internal_accuracyboost: 2`) | 0.000892 | 1.6 s |
 
 ![The 30 comparison points, colored by the per-point difference](cfastpt_vs_fastpt_points.png)
+
+Measured on 2026-09-23:
+
+- Test 28 (3x2pt): max $\Delta\chi^2 = 0.0010$ at the defaults,
+  $0.000013$ at the pushed camb/cosmolike settings.
+- Test 29 (2x2pt): $0.00010$ and $0.000001$, the mildest of the
+  three, with the TATT tables entering through galaxy-galaxy
+  lensing alone.
+- `--mask=ones` (no scale cuts, all 900 points weighted): every
+  sweep still passes. Cosmic shear measures max
+  $\Delta\chi^2 = 0.055$ at the default camb/cosmolike settings,
+  3x2pt 0.062, and 2x2pt 0.011; at the pushed settings they fall
+  to 0.00004, 0.00006, and 0.00003.
+
+The default-settings values are insensitive to the FAST-PT boosts
+(cosmic shear's 0.055 is fifty-seven times its baseline-mask
+value): the unmasked small scales amplify cosmolike's default
+integration error, not a FAST-PT grid deficiency.
 
 > [!NOTE]
 > The fastpt defaults hold this accuracy on their own; raising the
@@ -180,9 +216,97 @@ settings
 
 > [!NOTE]
 > `--high=1`: applies the pushed camb/cosmolike settings of the
-> accuracy checks to every block of test 27 (the other tests do not
-> read it). The full comparison is both invocations.
+> accuracy checks to every block of tests 27-29 (the other tests do
+> not read it). The full comparison is both invocations.
 
+> [!NOTE]
+> `--mask`: reruns tests 27-29 under a different scale-cut mask.
+> `--mask=frozen` (the default) keeps the baseline mask of the
+> frozen contract (533 of the 900 data points); `--mask=ones` keeps
+> every point (no scale cuts), the strictest comparison. Each choice
+> is a frozen TATT dataset variant differing only in its `mask_file`
+> line, and the 0.2 pass rule applies unchanged.
+
+
+### The Halofit vs EE2 checks (`test_nonlinear.py`, NL1-NL2) <a name="halofit_ee2"></a>
+
+The likelihoods can source the nonlinear matter power from CAMB's
+Takahashi halofit (`non_linear_emul: 2`, the frozen contract's
+setting) or from EuclidEmulator2 (`non_linear_emul: 1`). NL1
+evaluates the DES-Y3 cosmic-shear data vector and NL2 the DES-Y3
+3x2pt data vector with both sources at ten fixed cosmologies across
+the omegam/ns/As space, in the NLA configuration; every other
+parameter keeps the frozen fiducial.
+
+At every cosmology the EE2 data vector is the fiducial: the reported
+quantity is the $\Delta\chi^2$ of the Halofit vector against it
+($\delta^T C^{-1} \delta$), zero for identical vectors. Each
+cosmology carries its own regenerated fiducial, so no stored data
+vector enters the metric.
+
+The checks are advisory: no pass/fail. The numbers say how much of
+the statistical error budget the Halofit-vs-emulator difference
+consumes under the chosen scale cuts. The `--mask` option of the
+comparison sweeps applies: `--mask=frozen` (the default) weights the
+difference with the contract mask, `--mask=ones` with every data
+point kept (no scale cuts).
+
+Measured on 2026-09-23 (the figure below, frozen mask):
+
+- NL1 (cosmic shear): max $\Delta\chi^2 = 11.5$, median $1.4$;
+  max $21.5$, median $2.4$ under `--mask=ones`.
+- NL2 (3x2pt): max $53.0$, median $6.0$; max $243.0$, median
+  $42.6$ under `--mask=ones`.
+
+![The ten cosmologies, colored by the Halofit-vs-EE2 difference](halofit_vs_ee2_points.png)
+
+#### Running the Halofit vs EE2 checks <a name="run_halofit_ee2"></a>
+
+We assume users are in the Conda cocoa environment from a previous
+`conda activate cocoa` command, that the shell is bash, and that the
+current folder is the cocoa main folder `cocoa/Cocoa`.
+
+**Step :one:**: activate the private Python environment by sourcing
+the script `start_cocoa.sh`
+
+    source start_cocoa.sh
+
+**Step :two:**: run the checks under the frozen contract mask
+
+    python -m pytest ./projects/des_y3/tests/test_nonlinear.py
+
+**Step :three:**: repeat them with every data point kept
+
+    python -m pytest ./projects/des_y3/tests/test_nonlinear.py --mask=ones
+
+### The EE2 race test (`test_ee2.py`, test 30) <a name="ee2_race"></a>
+
+Cocoa pins a modified EuclidEmulator2: OpenMP threading, a
+1,010-redshift capacity, the `get_boost2` API with a pre-built
+emulator, memory-leak fixes, and a bilinear interpolation with a
+border fix. The modifications and their measured speed-up are
+documented in the repository's own README
+(`external_modules/code/euclidemu2/README.md`).
+
+Test 30 is the race check with EE2 on: the fiducial evaluated fresh
+and again as the 10th of 10 cosmologies on one model instance, on
+the DES-Y3 cosmic-shear configuration with the nonlinear $P(k)$
+from EE2 (`non_linear_emul: 1`). Every other race check in the
+table runs with halofit (`non_linear_emul: 2`, the frozen
+contract's setting), so only this row executes EE2's
+OpenMP-threaded compute; a thread race or leaked state inside it
+shifts the second fiducial value, and the two must agree within
+$10^{-4}$.
+
+Measured on 2026-09-23:
+
+- Test 30: the fresh and 10th-in-a-row fiducial agree to all eight
+  printed decimals.
+- The modified EE2 build against the pre-modification one, at ten
+  fixed cosmologies on this project's cosmic shear under the frozen
+  mask: max $\Delta\chi^2 = 3.0\times10^{-8}$, with a max
+  fractional data-vector difference of $7.4\times10^{-6}$. The
+  modification gate itself runs as the lsst_y1 project's test 18.
 
 ### Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
 
@@ -248,16 +372,20 @@ The file `test_accuracy_baryons.py` repeats the default-versus-high
 accuracy comparison with the `bfmt` theory block switched on: one
 advisory check per feedback method (the three SP(k) fb relations,
 BCEmu, Flamingo, BACCOemu, and BCemu2025), at a fixed parameter
-point per method. Each check creates its data vector on the fly, by
-the same mechanism as the N-random-models check: the
-default-settings model writes its own theory vector during
-evaluation, that vector becomes the data of a temporary dataset, and
-the pushed-settings model evaluates at the same point against it.
-The fiducial $\chi^2$ is therefore zero by construction, nothing is
-stored in the snapshot, and the single reported number,
-$\Delta\chi^2$, is a pure numerics response. The check BF0
-additionally runs the one-setting-at-a-time scan with the Akino
-SP(k) feedback on, so a large delta names the setting causing it.
+point per method.
+
+Each check creates its data vector on the fly, by the same
+mechanism as the N-random-models check: the default-settings model
+writes its own theory vector during evaluation, that vector becomes
+the data of a temporary dataset, and the pushed-settings model
+evaluates at the same point against it. The fiducial $\chi^2$ is
+therefore zero by construction, nothing is stored in the snapshot,
+and the single reported number, $\Delta\chi^2$, is a pure numerics
+response.
+
+The check BF0 additionally runs the one-setting-at-a-time scan with
+the Akino SP(k) feedback on, so a large delta names the setting
+causing it.
 
 Every checked configuration is measurable by construction. The
 BACCOemu check evaluates with `omegab: 0.049`, inside that
@@ -290,6 +418,7 @@ theory prediction was stored at freeze time
 today's prediction against that stored vector: zero at freeze time
 by construction, so a $\chi^2$ above the tolerance means cosmolike
 or the `bfmt` theory block changed its prediction since the freeze.
+
 These tests complement the accuracy checks above: the accuracy
 checks regenerate their vector on the fly per run, so they measure
 the numerical settings and can never see drift; the drift tests hold
