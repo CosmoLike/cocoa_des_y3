@@ -187,6 +187,12 @@ model).
 > For the sampled parameters of each model, their validity ranges, and the `bfmt`
 > options, see `Cocoa/external_modules/code/baryon_suppression/README.md`.
 
+# Table of contents <a name="table_of_contents"></a>
+
+1. [Baryonic feedback on EXAMPLE_EVALUATE1](#des_y3_baryonic_feedback)
+2. [Running Hybrid Cosmolike-ML emulators](#cobaya_base_code_examples_emul2)
+3. [Unit tests](#des_y3_unit_tests)
+
 # Running Hybrid Cosmolike-ML emulators <a name="cobaya_base_code_examples_emul2"></a>
 
 > [!Warning]
