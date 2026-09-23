@@ -19,7 +19,7 @@ The isolation is internal; the commands below stay the same.
 # Table of contents
 
 1. [Running the tests](#run_tests)
-2. [The 24 tests](#the_tests)
+2. [The tests](#the_tests)
     1. [The CFASTPT vs FASTPT comparison](#cfastpt_fastpt)
     2. [The Halofit vs EE2 checks](#halofit_ee2)
     3. [The EE2 race test](#ee2_race)
@@ -58,7 +58,7 @@ limit.
 A full run performs about 150 likelihood evaluations and takes
 a few minutes. The test files force `OMP_NUM_THREADS=4` internally.
 
-## The 24 tests <a name="the_tests"></a>
+## The tests <a name="the_tests"></a>
 
 The standard configurations get four tests each: a $\chi^2$ drift check
 and a race-condition check, both in the NLA and in the TATT intrinsic-alignment
