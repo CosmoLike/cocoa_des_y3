@@ -142,6 +142,8 @@ discussion); the convergence below is this project's own sweep:
 | 80 | 0.026 | 0.00055 | 2.3 s |
 | 160 | 0.009 | 0.00015 | 2.7 s |
 
+![The 30 comparison points, colored by the per-point difference](cfastpt_vs_fastpt_points.png)
+
 > [!Warning]
 > Do not lower the fastpt `accuracyboost` below 40 in a
 > TATT analysis with `IA_code: 1`: the tidal-torquing and
