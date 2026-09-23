@@ -187,6 +187,13 @@ model).
 > For the sampled parameters of each model, their validity ranges, and the `bfmt`
 > options, see `Cocoa/external_modules/code/baryon_suppression/README.md`.
 
+# Table of contents <a name="table_of_contents"></a>
+
+1. [Baryonic feedback on EXAMPLE_EVALUATE1](#des_y3_baryonic_feedback)
+2. [Running Hybrid Cosmolike-ML emulators](#cobaya_base_code_examples_emul2)
+3. [Unit tests](#des_y3_unit_tests)
+4. [FAST-PT accuracy for TATT (`IA_code: 1`)](#fastpt_accuracy)
+
 # Running Hybrid Cosmolike-ML emulators <a name="cobaya_base_code_examples_emul2"></a>
 
 > [!Warning]
@@ -433,7 +440,7 @@ are quoted here: rerun the checks to measure them on the current
 code, and see [tests/README.md](tests/README.md) for each check,
 the settings raised, and what each setting controls.
 
-## FAST-PT accuracy for TATT (`IA_code: 1`) <a name="fastpt_accuracy"></a>
+# FAST-PT accuracy for TATT (`IA_code: 1`) <a name="fastpt_accuracy"></a>
 
 Cosmolike computes the TATT perturbation-theory integrals with two
 implementations: cfastpt, the C code inside the compiled interface
@@ -445,15 +452,17 @@ $\Delta\chi^2$ is the $\chi^2$ of the FAST-PT vector against the
 cfastpt vector through this project's masked inverse covariance,
 zero for identical predictions.
 
-At FAST-PT's shipped grid the implementations disagree by up to
-$\Delta\chi^2 = 4.3$ across the prior. The
-disagreement is FAST-PT grid error: it falls as a power law with the
-fastpt `accuracyboost` and crosses the 0.2 band at 40,
-the minimum the example yamls recommend.
+The default fastpt settings were validated on a restricted region
+of the TATT prior, where the two implementations agree closely (the
+fiducial-point regression tests); across the entire prior volume
+they disagree by up to $\Delta\chi^2 = 4.3$. The
+disagreement falls as a power law with the fastpt `accuracyboost`,
+so accuracy over the full prior is a settings choice: the 0.2 band
+is reached at 40, the minimum the example yamls recommend.
 
 | FAST-PT grid boost | max $\Delta\chi^2$ | median $\Delta\chi^2$ | cost per cosmology |
 |---|---|---|---|
-| 1 (shipped default) | 4.32 | 0.128 | 1.0 s |
+| 1 (default settings) | 4.32 | 0.128 | 1.0 s |
 | 20 | 0.238 | 0.0065 | 1.2 s |
 | 40 (recommended minimum) | 0.078 | 0.0020 | 1.6 s |
 | 80 | 0.026 | 0.00055 | 2.3 s |
@@ -464,8 +473,8 @@ the minimum the example yamls recommend.
 > [!Warning]
 > Do not lower the fastpt `accuracyboost` below 40 in a
 > TATT analysis with `IA_code: 1`: the tidal-torquing and
-> $b_{\rm TA}$ convolution terms are under-resolved at the shipped
-> grid.
+> $b_{\rm TA}$ convolution terms need the raised grid at large
+> intrinsic-alignment amplitudes.
 
 > [!NOTE]
 > Production TATT analyses use cfastpt (`IA_code: 0`): it is the
