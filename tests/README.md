@@ -21,9 +21,10 @@ The isolation is internal; the commands below stay the same.
 1. [Running the tests](#run_tests)
 2. [The 24 tests](#the_tests)
     1. [The CFASTPT vs FASTPT comparison](#cfastpt_fastpt)
-    2. [Accuracy checks](#accuracy_checks)
-    3. [Baryonic feedback accuracy checks](#baryon_accuracy_checks)
-    4. [Baryonic feedback drift tests](#baryon_drift_tests)
+    2. [The Halofit vs EE2 checks](#halofit_ee2)
+    3. [Accuracy checks](#accuracy_checks)
+    4. [Baryonic feedback accuracy checks](#baryon_accuracy_checks)
+    5. [Baryonic feedback drift tests](#baryon_drift_tests)
 3. [Appendix](#appendix)
     1. [FAQ: Do the tests keep their own data?](#frozen_copy)
     2. [FAQ: Why do the tests use their own data vectors?](#synthetic_vectors)
@@ -224,6 +225,53 @@ settings
 > is a frozen TATT dataset variant differing only in its `mask_file`
 > line, and the 0.2 pass rule applies unchanged.
 
+
+### The Halofit vs EE2 checks (`test_nonlinear.py`, NL1-NL2) <a name="halofit_ee2"></a>
+
+The likelihoods can source the nonlinear matter power from CAMB's
+Takahashi halofit (`non_linear_emul: 2`, the frozen contract's
+setting) or from EuclidEmulator2 (`non_linear_emul: 1`). NL1
+evaluates the DES-Y3 cosmic-shear data vector and NL2 the DES-Y3
+3x2pt data vector with both sources at ten fixed cosmologies across
+the omegam/ns/As space, in the NLA configuration; every other
+parameter keeps the frozen fiducial.
+
+At every cosmology the EE2 data vector is the fiducial: the reported
+quantity is the $\Delta\chi^2$ of the Halofit vector against it
+($\delta^T C^{-1} \delta$), zero for identical vectors. Each
+cosmology carries its own regenerated fiducial, so no stored data
+vector enters the metric.
+
+The checks are advisory: no pass/fail. The numbers say how much of
+the statistical error budget the Halofit-vs-emulator difference
+consumes under the chosen scale cuts. The `--mask` option of the
+comparison sweeps applies: `--mask=frozen` (the default) weights the
+difference with the contract mask, `--mask=ones` with every data
+point kept (no scale cuts).
+
+Under the frozen mask (2026-09-23) NL1 measures max
+$\Delta\chi^2 = 11.5$, median $1.4$; NL2 measures max $53.0$,
+median $6.0$. Under the all-ones mask (2026-09-23) NL1 measures max
+$21.5$, median $2.4$; NL2 measures max $243.0$, median $42.6$.
+
+#### Running the Halofit vs EE2 checks <a name="run_halofit_ee2"></a>
+
+We assume users are in the Conda cocoa environment from a previous
+`conda activate cocoa` command, that the shell is bash, and that the
+current folder is the cocoa main folder `cocoa/Cocoa`.
+
+**Step :one:**: activate the private Python environment by sourcing
+the script `start_cocoa.sh`
+
+    source start_cocoa.sh
+
+**Step :two:**: run the checks under the frozen contract mask
+
+    python -m pytest ./projects/des_y3/tests/test_nonlinear.py
+
+**Step :three:**: repeat them with every data point kept
+
+    python -m pytest ./projects/des_y3/tests/test_nonlinear.py --mask=ones
 
 ### Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
 
