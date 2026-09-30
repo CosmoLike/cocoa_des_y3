@@ -152,6 +152,8 @@ and
         mpirun -n 4 --oversubscribe \
           cobaya-run ./projects/des_y3/EXAMPLE_MCMC1.yaml -f
 
+The likelihoods of the examples, the parameter files they include, and the parameters each likelihood fixes or must not vary are described in [likelihood/README.md](likelihood/README.md).
+
 # Baryonic feedback on EXAMPLE_EVALUATE1 <a name="des_y3_baryonic_feedback"></a>
 
 `EXAMPLE_EVALUATE1.yaml` can apply an external baryonic feedback suppression to the
