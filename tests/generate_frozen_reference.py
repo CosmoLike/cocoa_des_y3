@@ -522,11 +522,14 @@ def main():
     print("freezing ../data ...", flush=True)
     # the data copy is what lets users change ../data later without
     # touching the tests; .DS_Store (macOS Finder metadata) would only
-    # pollute the manifest. ignore_patterns builds the filter function
+    # pollute the manifest. The DES FITS files (*.fits, ~33 MB) are the
+    # source scripts/make_nz_from_fits.py writes the n(z) tables from;
+    # no test reads them, so copying them would only double their size
+    # in the repository. ignore_patterns builds the filter function
     # copytree calls in every folder; matching names are skipped.
     shutil.copytree(os.path.join(PROJECT_DIR, "data"),
                     os.path.join(u.FROZEN_DIR, "data"),
-                    ignore=shutil.ignore_patterns(".DS_Store"))
+                    ignore=shutil.ignore_patterns(".DS_Store", "*.fits"))
     for cfg in u.EXAMPLES.values():
         shutil.copy2(os.path.join(PROJECT_DIR, cfg["provenance"]),
                      os.path.join(u.FROZEN_DIR, cfg["provenance"]))
