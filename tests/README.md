@@ -465,7 +465,9 @@ around a sharp feature in the table) and `photoz_zmid_convention`
 (0 = the z column of the n(z) file holds Z_LOW left bin edges, so
 the tabulated value belongs at the cell center z + dz/2; 1 = the
 column holds Z_MID sample points). The two z-column readings differ
-by a rigid dz/2 shift of every distribution.
+by a rigid dz/2 shift of every distribution. `scripts/README.md` lists
+the DES FITS files the n(z) tables come from and how to write the
+tables with either z column.
 
 The test evaluates the frozen cosmic-shear fiducial under five
 settings in one process - the default, each alternative, and the
