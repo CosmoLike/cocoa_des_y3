@@ -520,11 +520,15 @@ bit-identical round trip back to Limber, agreement with the measured
 $\Delta\chi^2$ to 5%, and, last, the frozen-reference check on the
 Limber evaluation.
 
-Measured on 2026-09-27:
+Measured on 2026-10-01:
 
-- $\Delta\chi^2 = 0.011$ for the Y3 3x2pt data vector (example2),
-  far below the survey's statistical precision; the largest pair,
-  (3,2), contributes 0.006.
+- $\Delta\chi^2 = 0.012$ for the Y3 3x2pt data vector (example2),
+  far below the survey's statistical precision; the largest pairs,
+  (3,2) and (4,2), contribute 0.007 and 0.006.
+- 0.011 on 2026-09-27; the lens-bin quadrature changes of 2026-09-30
+  (cosmolike_core e068a28, 7e8f5d6: per-bin node counts, and a
+  split Gauss-Legendre rule where magnification widens the lens
+  range) moved it by 0.001.
 
 ### The non-Limber galaxy clustering check (`test_nonlimber_gg.py`) <a name="nonlimber_gg"></a>
 
@@ -546,12 +550,14 @@ clustering entries change, a bit-identical round trip back to the
 default, agreement with the measured $\Delta\chi^2$ to 5%, and, last,
 the frozen-reference check on the default evaluation.
 
-Measured on 2026-09-28:
+Measured on 2026-10-01:
 
-- $\Delta\chi^2 = 9.26$ for the Y3 3x2pt data vector (example2), against
-  0.011 for the same comparison in galaxy-galaxy lensing.
-- Lens bins 4, 3, 2, 1, 0 contribute 4.38, 2.38, 1.73, 0.63, 0.19
+- $\Delta\chi^2 = 9.49$ for the Y3 3x2pt data vector (example2), against
+  0.012 for the same comparison in galaxy-galaxy lensing.
+- Lens bins 4, 3, 2, 1, 0 contribute 4.56, 2.44, 1.75, 0.61, 0.19
   (each bin's block alone).
+- 9.26 on 2026-09-28; the core and likelihood changes since moved it
+  by 2.6% (not separated).
 
 
 ### The sector-ladder cache check (`test_cache_consistency.py`) <a name="cache_ladder"></a>
