@@ -470,6 +470,14 @@ Use the five redMaGiC lens and four source bins in `des_y3_real.dataset`, with
 its baseline 3×2pt mask. The calculation uses the adapter's catalog densities
 and per-component shape dispersions.
 
+The default [installation options](../../set_installation_options.sh) set
+`IGNORE_COSMOLIKE_DES_Y3_COVARIANCE=1`. This leaves covariance-generation
+kernels and notebook bindings out of the compiled interface. Likelihoods still
+read and invert their supplied covariance matrices. The steps below enable
+covariance generation for this build; comment out that export in
+`set_installation_options.sh` to keep it enabled in later sessions.
+Recompile after changing the option, then restart any running notebook kernel.
+
 We assume Cocoa and this project are installed, users have run
 `conda activate cocoa`, the shell is Bash, and the current folder is
 `cocoa/Cocoa`.
@@ -478,9 +486,10 @@ We assume Cocoa and this project are installed, users have run
 
     source start_cocoa.sh
 
-**Step :two:**: compile the project interface.
+**Step :two:**: enable covariance generation and compile the project interface.
 
     unset IGNORE_COSMOLIKE_DES_Y3_CODE
+    unset IGNORE_COSMOLIKE_DES_Y3_COVARIANCE
     source ./projects/des_y3/scripts/compile_des_y3.sh
 
 **Step :three:**: start Jupyter.
@@ -510,3 +519,16 @@ component plots, accuracy controls and covariance-only tests.
 > eight OpenMP threads and one BLAS thread. `accuracy_boost` refines
 > tables and cutoffs; `integration_accuracy` separately selects precomputed
 > GSL rules from [covariance/default.yaml](covariance/default.yaml).
+
+To return to a data-vector-only build, use the following steps from
+`cocoa/Cocoa` with `conda activate cocoa` and Bash.
+
+**Step :one:**: activate Cocoa.
+
+    source start_cocoa.sh
+
+**Step :two:**: omit covariance generation and rebuild the interface.
+
+    unset IGNORE_COSMOLIKE_DES_Y3_CODE
+    export IGNORE_COSMOLIKE_DES_Y3_COVARIANCE=1
+    source ./projects/des_y3/scripts/compile_des_y3.sh
