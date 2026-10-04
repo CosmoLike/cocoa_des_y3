@@ -1,3 +1,12 @@
+# Table of contents <a name="table_of_contents"></a>
+
+1. [Running Cosmolike projects (Basic instructions)](#des_y3_running_cosmolike_projects)
+2. [Baryonic feedback on EXAMPLE_EVALUATE1](#des_y3_baryonic_feedback)
+3. [Running Hybrid Cosmolike-ML emulators](#cobaya_base_code_examples_emul2)
+4. [Unit tests](#des_y3_unit_tests)
+5. [Minimum accuracy parameters](#des_y3_minimum_accuracy)
+6. [Computing covariances](#computing_covariances)
+
 ## Running Cosmolike projects (Basic instructions) <a name="des_y3_running_cosmolike_projects"></a> 
 
 From `Cocoa/Readme` instructions:
@@ -188,12 +197,6 @@ model).
 > [!TIP]
 > For the sampled parameters of each model, their validity ranges, and the `bfmt`
 > options, see `Cocoa/external_modules/code/baryon_suppression/README.md`.
-
-# Table of contents <a name="table_of_contents"></a>
-
-1. [Baryonic feedback on EXAMPLE_EVALUATE1](#des_y3_baryonic_feedback)
-2. [Running Hybrid Cosmolike-ML emulators](#cobaya_base_code_examples_emul2)
-3. [Unit tests](#des_y3_unit_tests)
 
 # Running Hybrid Cosmolike-ML emulators <a name="cobaya_base_code_examples_emul2"></a>
 
@@ -427,11 +430,11 @@ the script `start_cocoa.sh`
 
 **Step :two:**: run the tests of this project
 
-    python -m pytest ./projects/des_y3/tests
+    python -m pytest ./projects/des_y3/tests/data_vector
 
 ## Minimum accuracy parameters <a name="des_y3_minimum_accuracy"></a>
 
-The advisory checks in `tests/test_accuracy.py` measure the
+The advisory checks in `tests/data_vector/test_accuracy.py` measure the
 numerical error of the default accuracy settings: each setting is
 raised one at a time on the DES-Y3 3x2pt configuration, so a large
 $\Delta\chi^2$ can be attributed to the setting causing it, and
@@ -445,3 +448,45 @@ No measured values are quoted here: rerun the checks to measure
 them on the current code, and see
 [tests/README.md](tests/README.md) for each check, the settings
 raised, and what each setting controls.
+
+# Computing covariances <a name="computing_covariances"></a>
+
+[EXAMPLE_EVALUATE_COVARIANCE.ipynb](EXAMPLE_EVALUATE_COVARIANCE.ipynb)
+computes real-space and Fourier-space galaxy/shear covariances, with
+separate Gaussian, super-sample and connected components. It compares
+accuracy boosts, checks eigenvalues and plots the changes.
+
+We assume Cocoa and this project are installed, users have run
+`conda activate cocoa`, the shell is Bash, and the current folder is
+`cocoa/Cocoa`.
+
+**Step :one:**: activate Cocoa's private Python environment.
+
+    source start_cocoa.sh
+
+**Step :two:**: compile the project interface.
+
+    unset IGNORE_COSMOLIKE_DES_Y3_CODE
+    source ./projects/des_y3/scripts/compile_des_y3.sh
+
+**Step :three:**: start Jupyter.
+
+    jupyter notebook --no-browser --port=8888
+
+**Step :four:**: open the printed URL and select
+`projects/des_y3/EXAMPLE_EVALUATE_COVARIANCE.ipynb`.
+
+**Step :five:**: inspect the survey settings, choose `boosts`, then select
+**Kernel → Restart Kernel and Run All Cells**.
+
+The final cell writes `covariance/forecast_real.npz`,
+`covariance/forecast_fourier.npz` and `covariance/forecast_camb.npz`.
+The [covariance guide](covariance/README.md) explains the settings, output
+arrays, physical approximations and separate covariance test command.
+
+> [!NOTE]
+> This is a massless-neutrino, Limber forecast with linear galaxy bias,
+> zero IA, magnification and RSD, and a spherical-cap footprint.
+> The notebook uses eight OpenMP threads and one BLAS thread.
+> A larger `accuracy_boost` refines integrations; it does not certify
+> parameter-error convergence or replace the likelihood's supplied matrix.

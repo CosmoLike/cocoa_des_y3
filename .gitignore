@@ -13,3 +13,6 @@ interface/.DS_Store
 likelihood/.DS_Store
 scripts/.DS_Store
 data/.DS_Store
+
+# Covariance notebook outputs; the survey settings remain tracked.
+covariance/forecast_*.npz
