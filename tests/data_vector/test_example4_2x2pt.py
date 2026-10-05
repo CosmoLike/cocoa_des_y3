@@ -1,28 +1,28 @@
-"""Unit tests 15-18: the cosmic-shear likelihood on the frozen DES-Y1 data.
+"""Unit tests 23-26: the 2x2pt likelihood on the frozen DES-Y1 data.
 
-Cosmic shear is the correlation of galaxy shape distortions produced by
-weak gravitational lensing; here it is the des_y3.cosmic_shear
-likelihood evaluated on the frozen copy of example3's configuration:
-the same likelihood class as tests 1-4, pointed at the DES-Y1 data
-(des_y1_real.dataset, with its own data vector, covariance, masks, and
-n(z) tables) instead of the DES-Y3 data (see cocoa_test_utils for what
-"frozen" means and for the Y1/Y3 split). The four tests:
+2x2pt combines two of example4's three two-point correlations: galaxy
+clustering and galaxy-galaxy lensing (cosmic shear is dropped). The
+frozen configuration is example4's with the likelihood renamed to
+des_y3.combo_2x2pt: same options, same DES-Y1 data files
+(des_y1_real.dataset), same evaluation point; only the probe
+selection inside cosmolike changes. The four tests mirror tests 19-22
+(see cocoa_test_utils for what "frozen" means and for the Y1/Y3
+split):
 
- 15. chi2 at the frozen fiducial point, within CHI2_TOLERANCE (0.2) of
+ 23. chi2 at the frozen fiducial point, within CHI2_TOLERANCE (0.2) of
      the frozen reference value.
- 16. race check: on one model, the fiducial evaluated fresh and again
+ 24. race check: on one model, the fiducial evaluated fresh and again
      as the 10th of 10 cosmologies in a row must agree to
-     RACE_TOLERANCE (1e-4). A disagreement means state leaked between
-     evaluations or OpenMP threads raced.
- 17. the same comparison as test 15 with the TATT intrinsic-alignment
+     RACE_TOLERANCE (1e-4).
+ 25. the same comparison as test 23 with the TATT intrinsic-alignment
      model (IA_model: 1) and DES_A2_1 = 0.05, DES_BTA_1 = 0.05,
-     DES_A2_2 = -1.51541 replacing the NLA point's zeros.
- 18. the same race check as test 16 with the TATT model.
+     DES_A2_2 = -1.51541.
+ 26. the same race check as test 24 with the TATT model.
 
 To run (from the Cocoa/ folder, cocoa environment active,
 start_cocoa.sh sourced):
 
-    python -m pytest ./projects/des_y3/tests
+    python -m pytest ./projects/des_y3/tests/data_vector
 """
 
 import os
@@ -34,18 +34,16 @@ os.environ["OMP_NUM_THREADS"] = "4"
 import sys
 import unittest
 
-# The tests folder is not a package; put it on the import path so the
-# shared harness resolves no matter where pytest was launched from.
-# insert(0, ...) puts the folder FIRST in the search order, ahead of
-# every other place a same-named module could hide.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# The harness stays in the parent tests/ folder. Add it explicitly so
+# direct execution and worker processes resolve this project's stored inputs.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import cocoa_test_utils as u
 
-EXAMPLE = "example3"
+EXAMPLE = "example4_2x2pt"
 
 
-class TestExample3CosmicShear(unittest.TestCase):
-    """Tests 15-18, sharing one frozen-state verification.
+class TestExample4TwoXTwo(unittest.TestCase):
+    """Tests 23-26, sharing one frozen-state verification.
 
     setUpClass runs once before the tests: it moves to ROOTDIR,
     verifies every frozen file against the SHA-256 manifest (an edited
@@ -62,17 +60,17 @@ class TestExample3CosmicShear(unittest.TestCase):
         u.verify_frozen()
         cls.reference = u.load_reference()
 
-    def test_x15_chi2_matches_frozen_reference(self):
+    def test_x23_chi2_matches_frozen_reference(self):
         """chi2 at the frozen NLA point stays within 0.2 of the reference.
 
-        The x prefix on tests 15-18 only keeps unittest's alphabetical
-        ordering aligned with the numbering (test_15 would sort before
-        test_2).
+        The x prefix on tests 23-26 only keeps unittest's alphabetical
+        ordering aligned with the numbering (test_23 would sort before
+        test_3).
         """
         chi2 = u.single_model_chi2(EXAMPLE, tatt=False)
         ref = self.reference[f"{EXAMPLE}_nla"]
         u.report_chi2_test(
-            15, "des_y1 (cosmic shear, NLA) chi2 vs frozen reference",
+            23, "des_y1 (2x2pt, NLA) chi2 vs frozen reference",
             chi2, ref, u.CHI2_TOLERANCE)
         # assertLess(a, b) passes when a < b and fails with msg
         # otherwise; in that message, :.6f prints fixed six decimals
@@ -81,39 +79,37 @@ class TestExample3CosmicShear(unittest.TestCase):
             msg=f"chi2 = {chi2:.6f} vs frozen reference {ref:.6f} "
                 f"(|delta| >= {u.CHI2_TOLERANCE})")
 
-    def test_x16_no_race_condition_ten_in_a_row(self):
+    def test_x24_no_race_condition_ten_in_a_row(self):
         """The fiducial as 10th of 10 cosmologies matches a fresh run."""
         u.assert_omp_threads()
         # the function returns a (fresh, tenth) pair; the assignment
         # unpacks it into the two names
         fresh, tenth = u.ten_in_a_row_chi2(EXAMPLE, tatt=False)
         u.report_race_test(
-            16, "des_y1 (cosmic shear, NLA) race check: "
-                "10 cosmologies in a row",
+            24, "des_y1 (2x2pt, NLA) race check: 10 cosmologies in a row",
             fresh, tenth, u.RACE_TOLERANCE)
         self.assertLess(
             abs(tenth - fresh), u.RACE_TOLERANCE,
             msg=f"10th-in-a-row chi2 = {tenth:.8f} vs fresh {fresh:.8f}")
 
-    def test_x17_chi2_matches_frozen_reference_tatt(self):
-        """Test 15 repeated with the TATT IA model and nonzero A2/BTA."""
+    def test_x25_chi2_matches_frozen_reference_tatt(self):
+        """Test 23 repeated with the TATT IA model and nonzero A2/BTA."""
         chi2 = u.single_model_chi2(EXAMPLE, tatt=True)
         ref = self.reference[f"{EXAMPLE}_tatt"]
         u.report_chi2_test(
-            17, "des_y1 (cosmic shear, TATT) chi2 vs frozen reference",
+            25, "des_y1 (2x2pt, TATT) chi2 vs frozen reference",
             chi2, ref, u.CHI2_TOLERANCE)
         self.assertLess(
             abs(chi2 - ref), u.CHI2_TOLERANCE,
             msg=f"TATT chi2 = {chi2:.6f} vs frozen reference {ref:.6f} "
                 f"(|delta| >= {u.CHI2_TOLERANCE})")
 
-    def test_x18_no_race_condition_ten_in_a_row_tatt(self):
-        """Test 16 repeated with the TATT IA model."""
+    def test_x26_no_race_condition_ten_in_a_row_tatt(self):
+        """Test 24 repeated with the TATT IA model."""
         u.assert_omp_threads()
         fresh, tenth = u.ten_in_a_row_chi2(EXAMPLE, tatt=True)
         u.report_race_test(
-            18, "des_y1 (cosmic shear, TATT) race check: "
-                "10 cosmologies in a row",
+            26, "des_y1 (2x2pt, TATT) race check: 10 cosmologies in a row",
             fresh, tenth, u.RACE_TOLERANCE)
         self.assertLess(
             abs(tenth - fresh), u.RACE_TOLERANCE,
