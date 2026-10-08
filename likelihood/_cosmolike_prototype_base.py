@@ -570,7 +570,6 @@ class _cosmolike_prototype_base(DataSetLikelihood):
         "H0": None,
         "omegam": None,
         "omegab": None,
-        "omegab": None,
         "mnu": None,
         "w": None,
         "wa": None,
@@ -731,7 +730,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
           extrap_kmax=2.5e2*self.accuracyboost).logP(self.z_interp_2D,
           np.power(10.0,self.log10k_interp_2D)).flatten(order='F')+np.log(h**3)   
       else:
-        raise LoggedError(self.log, "non_linear_emul = %d is an invalid option", non_linear_emul)
+        raise LoggedError(self.log, "non_linear_emul = %d is an invalid option", self.non_linear_emul)
 
       # G(z) = D(z) (1+z), with D(z) = sqrt(P_lin(z, k)/P_lin(0, k)) the
       # linear growth factor (D(0) = 1) at k = growth_k.
