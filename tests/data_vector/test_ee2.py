@@ -8,9 +8,11 @@ repository's README, external_modules/code/euclidemu2/README.md,
 documents them).
 
 The standard race checks (the test_example*.py files) run with the
-nonlinear P(k) from CAMB's Takahashi halofit (non_linear_emul: 2,
-the frozen contract's setting), so EE2's compute never executes
-inside them, and a race in it would go unseen. This test repeats
+nonlinear P(k) from CAMB's Takahashi halofit (non_linear_emul: 2, the
+setting of the frozen configurations), so EE2's compute never executes
+inside them, and a race in it would go unseen. A race is a bug where
+OpenMP threads write shared memory in an order that changes from run to
+run. This test repeats
 the race check on the DES-Y3 cosmic-shear configuration with the
 nonlinear P(k) from EE2 (non_linear_emul: 1): the fiducial
 evaluated fresh and again as the 10th of 10 cosmologies on one
@@ -27,7 +29,9 @@ start_cocoa.sh sourced):
 import os
 
 # OpenMP reads OMP_NUM_THREADS when the compiled libraries load, so
-# this must run before ANY cobaya/cosmolike import in the process.
+# this must run before any cobaya or cosmolike import in the process.
+# 4 is REQUIRED_OMP_THREADS of cocoa_testing.py: a race between
+# OpenMP threads can only show up when several threads run.
 os.environ["OMP_NUM_THREADS"] = "4"
 
 import sys
@@ -42,15 +46,20 @@ import cocoa_test_utils as u
 class TestEE2Race(unittest.TestCase):
     """Test 30, with one frozen-state verification.
 
-    setUpClass runs once before the test: it moves to ROOTDIR and
-    verifies every frozen file against the SHA-256 manifest. No
+    setUpClass runs once before the test: it moves to ROOTDIR (the
+    Cocoa/ folder, exported by start_cocoa.sh) and verifies every
+    frozen file against the SHA-256 manifest. No
     frozen reference chi2 is loaded: the race check compares one
     model against itself, so the frozen state only supplies the
     configuration and the data files.
     """
 
+    # the classmethod decorator hands the method the class itself
+    # (cls), not an instance; unittest calls setUpClass once before
+    # the first test of the class
     @classmethod
     def setUpClass(cls):
+        """Check the environment and the frozen files before the test."""
         u.require_cocoa_environment()
         u.verify_frozen()
 

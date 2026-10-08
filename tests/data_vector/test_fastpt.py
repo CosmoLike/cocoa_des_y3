@@ -6,19 +6,21 @@ implementation built into the cosmolike interface (`IA_code: 0`, the
 default), and the python FAST-PT package used through the fastpt
 theory block (`IA_code: 1`).
 
-27. example1 (cosmic shear): the SAME 30 hard-coded points
+27. example1 (cosmic shear): the same 30 hard-coded points
      across the intrinsic-alignment prior (FASTPT_COMPARISON_POINTS:
      20 drawn across the prior boxes plus a one-parameter-at-a-time
      family; cosmology fixed at the frozen fiducial) evaluated three
-     times - with cfastpt, with FASTPT at the pass configuration
-     (FASTPT_LOW_SETTINGS, hard-coded), and with FASTPT at the
-     doubled boosts (FASTPT_HIGH_SETTINGS). Every block prints its theory vector at
-     every point, and the CFASTPT vector is the fiducial of that
+     times: with cfastpt, with FASTPT at the pass configuration
+     (FASTPT_LOW_SETTINGS, written out in cocoa_test_utils), and with
+     FASTPT at the doubled boosts (FASTPT_HIGH_SETTINGS). Every block
+     prints its theory vector at every point (a block is one
+     configuration), and the CFASTPT vector is the fiducial of that
      point: its own chi2 against it is zero by construction, so the
      pass rule is the chi2 of the FASTPT(low) vector against it
      (delta^T C^-1 delta, a pure second-order deviation; a chi2
-     difference against the shipped data would ride the slope
-     instead). FASTPT(high)'s deviation is printed as the advisory
+     difference against the shipped data would instead follow the
+     first-order slope of the chi2, since the point is far from the
+     best fit). FASTPT(high)'s deviation is printed as the advisory
      FAST-PT grid response. Each configuration runs in its own
      subprocess, so no cache survives from one block to the next;
      inside a block the shared cosmology makes CAMB run once and the
@@ -51,7 +53,7 @@ without the option and one with it:
 
 The tests also read the --mask option (see conftest.py):
 --mask=frozen (the default) keeps the baseline mask of the frozen
-contract, and --mask=ones keeps every data point (no scale cuts),
+configuration, and --mask=ones keeps every data point (no scale cuts),
 the strictest comparison; the 0.2 pass rule applies unchanged:
 
     python -m pytest ./projects/des_y3/tests/data_vector/test_fastpt.py --mask=ones
@@ -63,7 +65,9 @@ The design and the point values are shared with lsst_y1's tests
 import os
 
 # OpenMP reads OMP_NUM_THREADS when the compiled libraries load, so
-# this must run before ANY cobaya/cosmolike import in the process.
+# this must run before any cobaya or cosmolike import in the process.
+# 4 is REQUIRED_OMP_THREADS of cocoa_testing.py: a race between
+# OpenMP threads can only show up when several threads run.
 os.environ["OMP_NUM_THREADS"] = "4"
 
 import sys
@@ -78,15 +82,20 @@ import cocoa_test_utils as u
 class TestCfastptVsFastptSweep(unittest.TestCase):
     """Tests 27-29, the direct CFASTPT-vs-FASTPT comparison.
 
-    setUpClass runs once before the tests: it moves to ROOTDIR and
-    verifies every frozen file against the SHA-256 manifest. No
+    setUpClass runs once before the tests: it moves to ROOTDIR (the
+    Cocoa/ folder, exported by start_cocoa.sh) and verifies every
+    frozen file against the SHA-256 manifest. No
     frozen reference chi2 is loaded: these tests compare the two
     implementations against each other, so the frozen state only
     supplies the configuration and the data files.
     """
 
+    # the classmethod decorator hands the method the class itself
+    # (cls), not an instance; unittest calls setUpClass once before
+    # the first test of the class
     @classmethod
     def setUpClass(cls):
+        """Check the environment and the frozen files before any test."""
         u.require_cocoa_environment()
         u.verify_frozen()
 
@@ -99,6 +108,9 @@ class TestCfastptVsFastptSweep(unittest.TestCase):
         high = os.environ.get("COCOA_FASTPT_HIGH", "0") == "1"
         setting = "high accuracy" if high else "default settings"
         mask = os.environ.get("COCOA_FASTPT_MASK", "frozen")
+        # five per-point lists come back: the chi2 of each block
+        # against the data, then the delta^T C^-1 delta of the low and
+        # high FASTPT vectors against the CFASTPT vector
         (chi2_cfastpt, chi2_fastpt_low, chi2_fastpt_high,
          dchi2_low, dchi2_high) = u.cfastpt_vs_fastpt_chi2s(
             "example1", high=high, mask=mask)

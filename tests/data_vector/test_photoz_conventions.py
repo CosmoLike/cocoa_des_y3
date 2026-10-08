@@ -1,9 +1,10 @@
 """Unit test: the runtime n(z) photo-z conventions.
 
-The likelihood exposes two runtime knobs that control how the n(z)
+The likelihood exposes two runtime settings that control how the n(z)
 table files are turned into the smooth distributions the Limber
 integrals consume (both settable per likelihood in its yaml, both
-defaulting to the historical behavior):
+defaulting to 0, the setting the shipped n(z) tables and the frozen
+references use):
 
   photoz_interpolation_type - the stage-1 interpolant of the two-stage
       n(z) scheme: 0 = cubic spline (the default), 1 = linear,
@@ -17,17 +18,18 @@ defaulting to the historical behavior):
       which is percent-level in cosmic shear.
 
 This test evaluates the frozen cosmic-shear fiducial under five
-settings IN ONE PROCESS: the default, each alternative, and the
+settings in one process: the default, each alternative, and the
 default again. For each alternative it measures
 
     delta chi2 = delta^T C^-1 delta,
     delta = dv(alternative) - dv(default),
 
-with C^-1 the masked inverse covariance from the compiled interface -
+with C^-1 the masked inverse covariance from the compiled interface:
 the same second-order construction the CFASTPT-vs-FASTPT sweep uses
 (the chi2 the alternative would score against a dataset whose data
-vector IS the default prediction), which never rides the slope of the
-distance to the shipped data.
+vector is the default prediction). A chi2 difference against the
+shipped data would instead follow the first-order slope of the chi2,
+since the fiducial is far from the best fit of the real data.
 
 Running everything in one process is the point, not a convenience:
 the n(z) table caches inside the compiled interface must notice a
@@ -46,7 +48,9 @@ start_cocoa.sh sourced):
 import os
 
 # OpenMP reads OMP_NUM_THREADS when the compiled libraries load, so
-# this must run before ANY cobaya/cosmolike import in the process.
+# this must run before any cobaya or cosmolike import in the process.
+# 4 is REQUIRED_OMP_THREADS of cocoa_testing.py: a race between
+# OpenMP threads can only show up when several threads run.
 os.environ["OMP_NUM_THREADS"] = "4"
 
 import shutil
@@ -70,25 +74,38 @@ SETTINGS = (
     ("default again (round trip)", 0, 0),
 )
 
-# The alternatives must be SEEN (a stale n(z) cache would give exactly
+# The alternatives must be seen (a stale n(z) cache would give exactly
 # zero); the floors are orders of magnitude below the measured deltas,
-# so they only catch a dead flag, never normal numerical drift.
+# so they only catch a dead flag, never normal numerical drift. The
+# Z_MID floor is higher because its rigid dz/2 shift is a much larger
+# effect than a change of interpolant.
 DCHI2_FLOORS = {"linear": 1.0e-8, "steffen": 1.0e-8, "Z_MID": 1.0e-2}
 
 
 class TestPhotozConventions(unittest.TestCase):
     """The five-setting sweep, sharing one frozen-state verification."""
 
+    # the classmethod decorator hands the method the class itself
+    # (cls), not an instance; unittest calls setUpClass once before
+    # the first test of the class
     @classmethod
     def setUpClass(cls):
+        """Check the environment and the frozen files; load the references."""
         u.require_cocoa_environment()
         u.verify_frozen()
         cls.reference = u.load_reference()
 
     def test_photoz_conventions(self):
+        """Evaluate the five settings and assert the floors and the round trip.
+
+        Each model prints its theory vector to a file in a temporary
+        folder (print_datavector), which this test reads back.
+        """
         import numpy as np
         import cosmolike_des_y3_interface as ci
 
+        # mkdtemp creates a new empty folder; addCleanup has unittest
+        # delete it after the test, whether the test passes or fails
         vectors_dir = tempfile.mkdtemp(prefix="photoz_conventions_")
         self.addCleanup(shutil.rmtree, vectors_dir, ignore_errors=True)
 
@@ -142,8 +159,8 @@ class TestPhotozConventions(unittest.TestCase):
             u.CHI2_TOLERANCE)
 
         # round trip: after all the flips, the default settings must
-        # reproduce the first vector identically - the cache rebuilt
-        # back to the same state
+        # reproduce the first vector identically, which shows the cache
+        # rebuilt back to the same state
         _, dv_return = results[SETTINGS[-1][0]]
         self.assertTrue(
             np.array_equal(dv_return, dv_default),
