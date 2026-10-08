@@ -8,20 +8,23 @@ likelihood yaml key adopt_limber_gs chooses how it is computed:
       multipole.
   adopt_limber_gs: 0 - below l = 150 the exact projection, computed by
       cosmolike's C_gs_tomo with the split of Fang, Krause, Eifler &
-      MacCrann (arXiv:1911.11947): an FFTLog integral of the linear
-      power spectrum plus, in Limber, what linear theory misses. In
+      MacCrann (arXiv:1911.11947): an FFTLog integral (a fast
+      Hankel-type transform on a logarithmic grid) of the linear power
+      spectrum plus, in Limber, what linear theory misses. In
       Fourier space each band center takes the Limber value plus the
       non-Limber correction interpolated between integer multipoles.
 
 ggl defaults to Limber because its lensing kernel is broad (galaxy
 clustering has its own key, adopt_limber_gg; see
-test_nonlimber_gg.py). The Limber approximation fails at low l for the lens-source pairs whose kernels overlap in
-redshift (lens bin = source bin, or the source bin in front of the lens
-bin, where the signal is the intrinsic alignment of the sources times
-the lens density). This test measures what the Limber default costs.
+test_nonlimber_gg.py). The Limber approximation fails at low l for the
+lens-source pairs whose kernels overlap in redshift (lens bin = source
+bin, or the source bin in front of the lens bin, where the signal is
+the intrinsic alignment of the sources times the lens density). This
+test measures what the Limber default costs.
 
-It evaluates the frozen 3x2pt fiducial (NLA) three times IN
-ONE PROCESS: Limber, non-Limber, Limber again, and computes
+It evaluates the frozen 3x2pt fiducial (NLA) three times in one
+process (so the ggl cache must notice each flag change): Limber,
+non-Limber, Limber again, and computes
 
     delta chi2 = delta^T C^-1 delta,
     delta = dv(non-Limber) - dv(Limber),
@@ -52,7 +55,9 @@ start_cocoa.sh sourced):
 import os
 
 # OpenMP reads OMP_NUM_THREADS when the compiled libraries load, so
-# this must run before ANY cobaya/cosmolike import in the process.
+# this must run before any cobaya or cosmolike import in the process.
+# 4 is REQUIRED_OMP_THREADS of cocoa_testing.py: a race between
+# OpenMP threads can only show up when several threads run.
 os.environ["OMP_NUM_THREADS"] = "4"
 
 import sys
@@ -78,8 +83,8 @@ SETTINGS = (
 # magnitude below the measured value, so it only catches a dead flag.
 DCHI2_FLOOR = 1.0e-6
 
-# delta chi2 measured on 2026-10-01 (macOS, arm64), and the relative band
-# assertion 4 allows around it.
+# delta chi2 measured for this project (macOS, arm64), and the relative
+# band (5%) assertion 4 allows around it.
 DCHI2_MEASURED = 0.01214
 DCHI2_RTOL = 0.05
 
@@ -87,13 +92,18 @@ DCHI2_RTOL = 0.05
 class TestNonLimberGGL(unittest.TestCase):
     """Limber vs non-Limber ggl on the frozen fiducial."""
 
+    # the classmethod decorator hands the method the class itself
+    # (cls), not an instance; unittest calls setUpClass once before
+    # the first test of the class
     @classmethod
     def setUpClass(cls):
+        """Check the environment and the frozen files; load the references."""
         u.require_cocoa_environment()
         u.verify_frozen()
         cls.reference = u.load_reference()
 
     def test_nonlimber_ggl(self):
+        """Run the three evaluations and assert checks 1-5 of the module docstring."""
         import numpy as np
         import cosmolike_des_y3_interface as ci
 
@@ -140,6 +150,7 @@ class TestNonLimberGGL(unittest.TestCase):
         dv_limber = vectors[SETTINGS[0][0]]
         dv_nonlimber = vectors[SETTINGS[1][0]]
         delta = dv_nonlimber - dv_limber
+        # @ is the matrix product: delta^T C^-1 delta
         dchi2 = float(delta @ icov @ delta)
 
         # the ggl block follows the cosmic shear block in every probe
@@ -161,9 +172,14 @@ class TestNonLimberGGL(unittest.TestCase):
             sl = slice(ggl0 + p*nlen, ggl0 + (p + 1)*nlen)
             block[sl] = delta[sl]
             rows.append((float(block @ icov @ block), p))
+        # sorted(..., reverse=True) lists the largest contribution
+        # first; the loop stops at contributions below 0.1% of the total
         for contribution, p in sorted(rows, reverse=True):
             if contribution < 1.0e-3*max(dchi2, DCHI2_FLOOR):
                 break
+            # name the pair when the pair list matches the block count,
+            # otherwise fall back to its index; {label:24s} pads the
+            # label to 24 characters
             label = (f"(lens {pairs[p][0]}, source {pairs[p][1]})"
                      if len(pairs) == npairs else f"pair {p}")
             print(f"      {label:24s} {contribution:.4f}")
@@ -190,7 +206,8 @@ class TestNonLimberGGL(unittest.TestCase):
             f"{DCHI2_MEASURED:.4f} by more than {DCHI2_RTOL:.0%}")
 
         # last, so that a stale frozen snapshot does not hide the four
-        # checks above
+        # checks above; the default setting is the frozen configuration,
+        # so its chi2 must match the frozen reference
         self.assertLess(
             abs(chi2s[SETTINGS[0][0]] - self.reference[REFERENCE_KEY]),
             u.CHI2_TOLERANCE,

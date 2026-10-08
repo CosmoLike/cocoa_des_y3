@@ -124,14 +124,14 @@ A `*` in a parameter name stands for every bin number.
 
 `DES_B2_*` are constants (0) of `params_lens.yaml` but are not in the table: a nonzero value in any lens bin switches on the one-loop bias terms of every lens bin, and with them `DES_B3NL_*` and `DES_BK_*`.
 
-The examples that run `combo_3x2pt` (`EXAMPLE_EVALUATE2.yaml`, `EXAMPLE_EVALUATE4.yaml`, `EXAMPLE_MCMC2.yaml`, and the EMUL2 examples numbered 2) fix `DES_PM1` ... `DES_PM5` at 0 in their own `params` block, which overrides the parameter files, so they do not sample the point masses although `combo_3x2pt` holds `gs`. `EXAMPLE_EVALUATE1.yaml` and `EXAMPLE_EVALUATE2.yaml` run TATT (`IA_model: 1`), where `DES_A2_1`, `DES_A2_2`, and `DES_BTA_1` act on the data vector.
+The examples that run `combo_3x2pt` (`EXAMPLE_EVALUATE2.yaml`, `EXAMPLE_EVALUATE4.yaml`, `EXAMPLE_MCMC2.yaml`, and the EMUL2 examples numbered 2) fix `DES_PM1` ... `DES_PM5` at 0 in their own `params` block, which overrides the parameter files, so they do not sample the point masses although `combo_3x2pt` holds `gs`. Every example except `EXAMPLE_EVALUATE3.yaml`, `EXAMPLE_EVALUATE4.yaml`, and `EXAMPLE_EMUL2_EVALUATE2.yaml` runs TATT (`IA_model: 1`), where `DES_A2_1`, `DES_A2_2`, and `DES_BTA_1` act on the data vector. Those three run NLA: the first two fix the three parameters at 0, while `EXAMPLE_EMUL2_EVALUATE2.yaml` (and the hybrid scripts that read it) still samples them, although they are inert there.
 
 # Changing the mask, the scale cuts, or the probes <a name="des_y3_changing"></a>
 
 > [!Warning]
 > The `fixed_params` blocks encode the blocks of each combination (and, in general, the mask of the data set). A user who changes the mask or the scale cuts, or the probes of a combination, must revisit that combination's `fixed_params`: a parameter it fixes may then act on the data vector, and the fixed value hides that dependence without any error.
 
-A `fixed_params` block in the likelihood block of the user's yaml replaces the combination's block as a whole: `fixed_params: null` samples every parameter again, and a shorter block keeps only the entries it repeats.
+A `fixed_params` block in the likelihood block of the user's yaml replaces the combination's block as a whole: `fixed_params: null` samples every parameter again, and a shorter block keeps only the entries it repeats. Only `combo_xi_gg.yaml` declares `fixed_params`; with the other likelihoods, fix parameters in the `params` block of the user's yaml.
 
 We assume users are in the Conda cocoa environment from a previous `conda activate cocoa` command, that the shell is bash, and that the current folder is the cocoa main folder `cocoa/Cocoa`.
 
@@ -147,7 +147,7 @@ We assume users are in the Conda cocoa environment from a previous `conda activa
         data_file: des_y3_real.dataset
         fixed_params: null
 
-**Step :three:**: declare every parameter sampled again with a `prior` in the `params` block, or delete its `value` entry there (the examples declare the point masses as constants), and add a value for it to the `sampler: evaluate: override` block (cobaya's evaluate sampler refuses an override of a parameter that is not sampled, so the block must match the sampled parameters)
+**Step :three:**: declare every parameter sampled again with a `prior` in the `params` block, or delete its `value` entry there (the examples declare the point masses as constants), and add a value for it to the `sampler: evaluate: override` block (cobaya's evaluate sampler refuses an override of a parameter that is not sampled, and draws a sampled parameter that the block omits at random from its `ref`)
 
     sampler:
       evaluate:

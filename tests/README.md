@@ -1,47 +1,77 @@
 # Tests
 
-The two test sectors answer different questions and can be run separately.
+The DES Y3 tests are divided into two sectors.
 
-- [Data-vector and likelihood tests](data_vector/README.md) check predicted
-  signals, frozen likelihood values, numerical accuracy and repeated
-  evaluations. This is the usual choice for likelihood users.
-- [Covariance tests](covariance/README.md) check this project's forecast inputs, real/Fourier
-  assembly, thread repeatability, positivity and saved-output metadata.
+- [Data-vector and likelihood checks](data_vector/README.md) cover the project
+  predictions, frozen inputs and numerical diagnostics.
+- [Covariance checks](covariance/README.md) cover forecast assembly and its
+  documented component checks. Covariance generation must be compiled.
 
-From `cocoa/Cocoa`, with the Cocoa environment active and `start_cocoa.sh`
-available, follow these steps.
+```mermaid
+flowchart TD
+  A["Compiled project"] --> B["data_vector/: predictions, frozen inputs, diagnostics"]
+  E["frozen/ + manifest_sha256.json"] --> B
+  A --> C["Covariance build: unset IGNORE_COSMOLIKE_DES_Y3_COVARIANCE, recompile"]
+  C --> D["covariance/: forecast assembly checks"]
+```
 
-**Step :one:**: activate Cocoa's private Python environment.
+We assume Cocoa and this project are installed, the Cocoa Conda environment
+is active, the shell is Bash, and the current folder is `cocoa/Cocoa/`.
 
-    source start_cocoa.sh
+Run the sectors in separate Python invocations: they initialize different
+compiled-library state. Running one project at a time also avoids importing
+another project's same-named test helpers.
 
-**Step :two:**: run the data-vector tests.
+**Step :one:**: activate Cocoa.
 
-    python -m pytest projects/des_y3/tests/data_vector
+```bash
+source start_cocoa.sh
+```
 
-For covariance checks, we assume the Conda Cocoa environment, Bash,
-and the current folder `cocoa/Cocoa`.
+**Step :two:**: run the data-vector sector.
 
-**Step :one:**: activate Cocoa's private Python environment.
+```bash
+python -m pytest ./projects/des_y3/tests/data_vector
+```
 
-    source start_cocoa.sh
+**Step :three:**: enable covariance generation.
 
-**Step :two:**: run the covariance tests.
+```bash
+unset IGNORE_COSMOLIKE_DES_Y3_COVARIANCE
+```
 
-    python -m pytest projects/des_y3/tests/covariance
+**Step :four:**: compile the project.
 
-To check both sectors, we assume the Conda Cocoa environment, Bash,
-and the current folder `cocoa/Cocoa`.
+```bash
+source ./projects/des_y3/scripts/compile_des_y3.sh
+```
 
-**Step :one:**: activate Cocoa's private Python environment.
+**Step :five:**: run the covariance sector.
 
-    source start_cocoa.sh
+```bash
+python -m pytest ./projects/des_y3/tests/covariance
+```
 
-**Step :two:**: select both test folders.
+The project must be enabled in `set_installation_options.sh` before
+activation. A covariance skip in a deliberately disabled build is expected;
+it is not a successful covariance check. Read the sector guide to distinguish
+asserted regressions from advisory accuracy reports.
 
-    python -m pytest projects/des_y3/tests/data_vector projects/des_y3/tests/covariance
+Frozen configurations and inputs are protected by `manifest_sha256.json`.
+Do not regenerate references to silence an unexplained failure. The
+[data-vector guide](data_vector/README.md#refreeze) documents the deliberate
+reference-update procedure and its limits.
 
-The shared data-vector harness, frozen snapshots, their fingerprint
-manifest and reference-generation scripts remain here in `tests/`.
-Moving test modules does not change those snapshots or refreeze any result.
-Covariance tests do not replace the likelihood's stored covariance.
+Hybrid examples can be checked without sampling:
+
+**Step :one:**: check configuration 1.
+
+```bash
+python ./projects/des_y3/EXAMPLE_EMUL2_MINIMIZE1.py --check
+```
+
+**Step :two:**: check configuration 2.
+
+```bash
+python ./projects/des_y3/EXAMPLE_EMUL2_MINIMIZE2.py --check
+```

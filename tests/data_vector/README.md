@@ -6,15 +6,20 @@ where evaluating several points in a row corrupts a later result
 through leftover internal state or colliding OpenMP threads).
 
 The project ships two generations of DES data, and the tests cover
-both: tests 1-14 evaluate the DES-Y3 data (`des_y3_real.dataset`),
-tests 15-26 evaluate the DES-Y1 data (`des_y1_real.dataset`) through
-the same `des_y3.*` likelihood classes.
+both: tests 1-8, 11-14 and 27-30 run on the DES-Y3 data set
+(`des_y3_real.dataset`), tests 15-26 on the DES-Y1 data set
+(`des_y1_real.dataset`), through the same `des_y3.*` likelihood
+classes. Each uses its data set's covariance, mask and n(z) with a
+synthetic data vector ([Appendix](#synthetic_vectors)). Numbers 9 and
+10 are unused.
 
-Every model build runs in its own worker subprocess: the Y1 and Y3
-data sets have different masked dimensions and n(z) table lengths,
+Most checks build each model in its own worker subprocess: the Y1 and
+Y3 data sets have different masked dimensions and n(z) table lengths,
 and the cosmolike C layer aborts the whole process when a second
 configuration with different dimensions initializes after the first.
-The isolation is internal; the commands below stay the same.
+The photo-z, non-Limber and cache checks build their models in the
+pytest process itself. The isolation is internal; the commands below
+stay the same.
 
 # Table of contents
 
@@ -33,7 +38,7 @@ The isolation is internal; the commands below stay the same.
 3. [Appendix](#appendix)
     1. [FAQ: Do the tests keep their own data?](#frozen_copy)
     2. [FAQ: Why do the tests use their own data vectors?](#synthetic_vectors)
-    3. [FAQ: Why were the references refrozen on 2026-09-28?](#gg_growth_fix)
+    3. [FAQ: Why does the non-Limber clustering subtract a separable-growth term?](#gg_growth_fix)
     4. [FAQ: How can maintainers refresh the snapshot?](#refreeze)
 
 ## Running the tests <a name="run_tests"></a>
@@ -53,15 +58,20 @@ the script `start_cocoa.sh`
 
 Without pytest:
 
-    python -m unittest discover -s ./projects/des_y3/tests -v
+    python -m unittest discover -s ./projects/des_y3/tests/data_vector -v
+
+Under unittest the `--high` and `--mask` options below do not exist;
+the FAST-PT and Halofit vs EE2 checks then run at their defaults
+unless `COCOA_FASTPT_HIGH` and `COCOA_FASTPT_MASK` are exported.
 
 The tests change no project files. Each test prints a progress line
 per model build and per evaluation, then a report with the
 computed $\chi^2$, the stored reference, the difference, and the pass
 limit.
 
-A full run performs about 247 likelihood evaluations and takes
-a few minutes. The test files force `OMP_NUM_THREADS=4` internally.
+A full run performs about 600 likelihood evaluations; the
+high-accuracy checks alone take minutes each. The test files force
+`OMP_NUM_THREADS=4` internally.
 
 ## The tests <a name="the_tests"></a>
 
@@ -82,9 +92,20 @@ The two checks and their pass limits:
 | race condition | the fiducial evaluated on its own vs evaluated again after nine other cosmologies; the two must agree within $10^{-4}$ | leftover state or an OpenMP race |
 
 Everything the tests compare against lives under `frozen/`: one
-snapshot of configurations, data, and reference values, captured
-together when the references were generated and unchanged since. The
-[Appendix](#appendix) explains how the snapshot is protected.
+snapshot of configurations, data, and reference values, written by
+`generate_frozen_reference.py` (the baryonic-feedback vectors by its
+separate `--baryons` run). The [Appendix](#appendix) explains how the
+snapshot is protected.
+
+The checks split into asserted regressions, which fail when a number
+moves, and advisory reports, which print numbers without pass/fail:
+
+```mermaid
+flowchart TD
+  A["generate_frozen_reference.py: --overwrite, then --baryons"] --> B["frozen/: configurations, data, reference chi2"]
+  B --> C["Asserted: tests 1-30, BD1-BD7, photo-z, non-Limber, cache"]
+  B --> D["Advisory: A0-A12, BF0-BF7, NL1-NL2"]
+```
 
 The test files and the configurations they cover:
 
@@ -135,15 +156,15 @@ zero for identical vectors and quadratic in their difference. A
 comparison against the shipped data vector would measure the slope
 of the distance to the data instead of the numerics.
 
-The fastpt block computes on two grids: `accuracyboost` multiplies
-the density of the output table cosmolike reads with linear
+The fastpt block computes on two grids: `accuracyboost` scales the
+density of the output table cosmolike reads with linear
 interpolation (the accuracy driver), and `internal_accuracyboost`
-the density of the internal grid the FFTLog convolutions run on,
-with a cubic spline in log k upsampling the terms from one grid
-onto the other.
+sets the internal grid the FFTLog convolutions run on (1,100 points,
+plus 200 per unit above 1), with a cubic spline in log k upsampling
+the terms from one grid onto the other.
 
-Both boosts are rebased so 1.0 is the converged configuration. The
-tests run FAST-PT at the defaults with the 0.2 band of the other
+`accuracyboost` is rebased so 1.0 gives the converged output table.
+The tests run FAST-PT at the defaults with the 0.2 band of the other
 checks as the pass limit; a doubled configuration repeats the
 measurement as an advisory.
 
@@ -160,9 +181,8 @@ through galaxy-galaxy lensing alone, under the 2x2pt masked
 inverse covariance.
 
 > [!NOTE]
-> Before the two-grid upgrade of the fastpt theory block (2026-09)
-> there was no upsampling and the difference reached
-> $\Delta\chi^2 = 4.3$ across the prior.
+> With one shared grid and no upsampling (the first row of the table
+> below), the difference reaches $\Delta\chi^2 = 4.3$ across the prior.
 
 The point values, the design, and the decision record live with the
 lsst_y1 project (its tests/README.md carries the full discussion);
@@ -176,7 +196,7 @@ the table below is this project's own measurement:
 
 ![The 30 comparison points, colored by the per-point difference](../cfastpt_vs_fastpt_points.png)
 
-Measured on 2026-09-23:
+Measured:
 
 - Test 28 (3x2pt): max $\Delta\chi^2 = 0.0010$ at the defaults,
   $0.000013$ at the pushed camb/cosmolike settings.
@@ -225,12 +245,13 @@ settings
 > not read it). The full comparison is both invocations.
 
 > [!NOTE]
-> `--mask`: reruns tests 27-29 under a different scale-cut mask.
-> `--mask=frozen` (the default) keeps the baseline mask of the
-> frozen contract (533 of the 900 data points); `--mask=ones` keeps
-> every point (no scale cuts), the strictest comparison. Each choice
-> is a frozen TATT dataset variant differing only in its `mask_file`
-> line, and the 0.2 pass rule applies unchanged.
+> `--mask`: reruns tests 27-29, and the Halofit vs EE2 checks NL1-NL2,
+> under a different scale-cut mask. `--mask=frozen` (the default) keeps
+> the baseline mask of the frozen contract (533 of the 900 data
+> points); `--mask=ones` keeps every point (no scale cuts), the
+> strictest comparison. `ones` selects a frozen TATT dataset variant
+> that differs from the base one only in its `mask_file` line, and the
+> 0.2 pass rule applies unchanged.
 
 
 ### The Halofit vs EE2 checks (`test_nonlinear.py`, NL1-NL2) <a name="halofit_ee2"></a>
@@ -256,7 +277,7 @@ comparison sweeps applies: `--mask=frozen` (the default) weights the
 difference with the contract mask, `--mask=ones` with every data
 point kept (no scale cuts).
 
-Measured on 2026-09-23 (the figure below, frozen mask):
+Measured (the figure below, frozen mask):
 
 - NL1 (cosmic shear): max $\Delta\chi^2 = 11.5$, median $1.4$;
   max $21.5$, median $2.4$ under `--mask=ones`.
@@ -303,30 +324,30 @@ OpenMP-threaded compute; a thread race or leaked state inside it
 shifts the second fiducial value, and the two must agree within
 $10^{-4}$.
 
-Measured on 2026-09-23:
+Measured:
 
 - Test 30: the fresh and 10th-in-a-row fiducial agree to all eight
   printed decimals.
-- The modified EE2 build against the pre-modification one, at ten
+- The modified EE2 build against the unmodified EuclidEmulator2, at ten
   fixed cosmologies on this project's cosmic shear under the frozen
   mask: max $\Delta\chi^2 = 3.0\times10^{-8}$, with a max
   fractional data-vector difference of $7.4\times10^{-6}$. The
   modification gate itself runs as the lsst_y1 project's test 18.
 
-### Accuracy checks (`test_accuracy.py`, A1-A12) <a name="accuracy_checks"></a>
+### Accuracy checks (`test_accuracy.py`, A0-A12) <a name="accuracy_checks"></a>
 
 Checks A1-A12 re-evaluate cosmic shear, 3x2pt, and 2x2pt, with NLA
 and TATT, on the DES-Y3 data (A1-A6) and on the DES-Y1 data
 (A7-A12), with every setting pushed far beyond the defaults at
-once. Before them, we change one accuracy parameter at a time on
-the DES-Y3 3x2pt NLA configuration, so a large $\Delta\chi^2$ can
+once. Before them, check A0 changes one accuracy parameter at a time
+on the DES-Y3 3x2pt NLA configuration, so a large $\Delta\chi^2$ can
 be attributed to the parameter causing it. The settings:
 
 | setting | raised to | what it controls |
 |---------|-----------|------------------|
-| `accuracyboost` (cosmolike) | 2 | sizes of cosmolike's internal lookup tables, including the dyadic z grid of the power-spectrum tables |
+| `accuracyboost` (cosmolike) | 3 (A0 also tries 5) | sizes of cosmolike's internal lookup tables, including the dyadic z grid of the power-spectrum tables |
 | `integration_accuracy` (cosmolike) | 10 | extra refinement passes of cosmolike's numerical integrals |
-| `internal_accuracyboost` (cosmolike) | 2 | density of the C-FAST-PT convolution grid relative to the output table the likelihood interpolates; 1 is the legacy single-grid path |
+| `internal_accuracyboost` (cosmolike) | 2 | density of the C-FAST-PT convolution grid relative to the output table the likelihood interpolates; 1 keeps the two grids equal |
 | `lmax` (cosmolike) | 200000 | highest multipole of the internal harmonic-space $C_\ell$ tables that cosmolike transforms into the real-space correlation functions; arcminute scales need very high $\ell$ |
 | `kmax_boltzmann` (cosmolike) | 40 | the k cutoff of the power spectrum the likelihood requests from CAMB |
 | `AccuracyBoost` (CAMB) | 2 | CAMB's overall accuracy multiplier: denser sampling in every internal CAMB grid, the most expensive setting |
@@ -341,11 +362,10 @@ moving the nodes (the construction is commented in
 
 `internal_accuracyboost` scales only the C-FAST-PT convolution
 grid; the output table the likelihood interpolates is unchanged.
-
-- 2026-09-25: the 0.5 default is converged. The lsst_y1 scan
-  measured $\Delta^T C^{-1} \Delta \le 10^{-9}$ against the
-  single-grid path down to 0.27, and `internal_accuracyboost: 1`
-  recovers that path exactly.
+This project's default, 1.0, keeps the two grids equal: the exact
+single-grid path. The lsst_y1 scan measured
+$\Delta^T C^{-1} \Delta \le 10^{-9}$ against that path for grid
+fractions down to 0.27.
 
 When several settings move the $\chi^2$, settle them in cost order:
 raise cosmolike `accuracyboost` first (cheap), then CAMB
@@ -354,9 +374,9 @@ time, and able to masquerade for the cheap settings).
 `kmax_boltzmann` and CAMB `kmax` are one physical cutoff seen from
 two sides; move them together.
 
-Each check reports the $\Delta\chi^2$ between the high-accuracy and
-the default evaluations: the numerical error of the default
-settings. No pass/fail.
+Each check reports the $\Delta\chi^2$ between the high-accuracy
+evaluation and the frozen reference, the default-settings $\chi^2$:
+the numerical error of the default settings. No pass/fail.
 
 > [!NOTE]
 > High-accuracy evaluations take minutes.
@@ -378,7 +398,7 @@ the script `start_cocoa.sh`
 
 To run every other test while skipping these:
 
-    python -m pytest ./projects/des_y3/tests --ignore ./projects/des_y3/tests/data_vector/test_accuracy.py
+    python -m pytest ./projects/des_y3/tests/data_vector --ignore ./projects/des_y3/tests/data_vector/test_accuracy.py
 
 ### Baryonic feedback accuracy checks (`test_accuracy_baryons.py`, BF1-BF7) <a name="baryon_accuracy_checks"></a>
 
@@ -388,9 +408,8 @@ advisory check per feedback method (the three SP(k) fb relations,
 BCEmu, Flamingo, BACCOemu, and BCemu2025), at a fixed parameter
 point per method.
 
-Each check creates its data vector on the fly, by the same
-mechanism as the N-random-models check: the default-settings model
-writes its own theory vector during evaluation, that vector becomes
+Each check creates its data vector on the fly: the default-settings
+model writes its own theory vector during evaluation, that vector becomes
 the data of a temporary dataset, and the pushed-settings model
 evaluates at the same point against it. The fiducial $\chi^2$ is
 therefore zero by construction, nothing is stored in the snapshot,
@@ -458,8 +477,8 @@ the script `start_cocoa.sh`
 
 The likelihood exposes two runtime knobs for how the n(z) table files
 become the smooth distributions the Limber integrals consume, both
-declared in the likelihood yamls and both defaulting to the
-historical behavior: `photoz_interpolation_type` (0 = cubic spline,
+declared in the likelihood yamls with the default 0:
+`photoz_interpolation_type` (0 = cubic spline,
 1 = linear, 2+ = Steffen monotone, which cannot overshoot below zero
 around a sharp feature in the table) and `photoz_zmid_convention`
 (0 = the z column of the n(z) file holds Z_LOW left bin edges, so
@@ -480,9 +499,10 @@ n(z) cache would give exactly zero), the frozen-reference check on
 the default, and a bit-identical round trip back to the default (a
 cache that fails to rebuild on the way back would fail loudly).
 
-Measured on 2026-09-25:
+Measured:
 
-- default: $\chi^2 = 0.000063$ (the frozen reference exactly).
+- default: the test requires the frozen reference of the cosmic-shear
+  NLA configuration, $\chi^2 = 0.000103$.
 - linear: $\Delta\chi^2 = 3.1\times10^{-4}$; Steffen:
   $\Delta\chi^2 = 1.6\times10^{-5}$. Either interpolant change is far below
   the survey's statistical precision.
@@ -520,15 +540,12 @@ bit-identical round trip back to Limber, agreement with the measured
 $\Delta\chi^2$ to 5%, and, last, the frozen-reference check on the
 Limber evaluation.
 
-Measured on 2026-10-01:
+Measured:
 
 - $\Delta\chi^2 = 0.012$ for the Y3 3x2pt data vector (example2),
   far below the survey's statistical precision; the largest pairs,
-  (3,2) and (4,2), contribute 0.007 and 0.006.
-- 0.011 on 2026-09-27; the lens-bin quadrature changes of 2026-09-30
-  (cosmolike_core e068a28, 7e8f5d6: per-bin node counts, and a
-  split Gauss-Legendre rule where magnification widens the lens
-  range) moved it by 0.001.
+  (3,2) and (4,2), contribute 0.007 and 0.006. The test pins
+  $\Delta\chi^2 = 0.01214$ to 5%.
 
 ### The non-Limber galaxy clustering check (`test_nonlimber_gg.py`) <a name="nonlimber_gg"></a>
 
@@ -550,14 +567,13 @@ clustering entries change, a bit-identical round trip back to the
 default, agreement with the measured $\Delta\chi^2$ to 5%, and, last,
 the frozen-reference check on the default evaluation.
 
-Measured on 2026-10-01:
+Measured:
 
 - $\Delta\chi^2 = 9.49$ for the Y3 3x2pt data vector (example2), against
-  0.012 for the same comparison in galaxy-galaxy lensing.
+  0.012 for the same comparison in galaxy-galaxy lensing. The test pins
+  $\Delta\chi^2 = 9.492$ to 5%.
 - Lens bins 4, 3, 2, 1, 0 contribute 4.56, 2.44, 1.75, 0.61, 0.19
   (each bin's block alone).
-- 9.26 on 2026-09-28; the core and likelihood changes since moved it
-  by 2.6% (not separated).
 
 
 ### The sector-ladder cache check (`test_cache_consistency.py`) <a name="cache_ladder"></a>
@@ -566,11 +582,12 @@ cosmolike caches every expensive stage behind its own key, and a
 partial-invalidation bug - one sector's update path leaving a stale
 static another sector consumes - produces wrong data vectors only in
 MIXED update sequences, which the per-point checks never exercise.
-The test walks a deterministic ladder in one process (three
-cosmology-only steps, then IA-only, source-photo-z, lens-photo-z and
-shear-calibration steps), evaluating after every step, then scrambles
-every sector at once and returns to the ladder's final point: the
-pipeline must reproduce the recorded data vector and $\chi^2$ bit for
+The test walks a deterministic ladder in one process (three steps in
+each sector in turn: cosmology, intrinsic alignment, source photo-z,
+lens photo-z and shear calibration), evaluating after every step and
+requiring every step to change the data vector, then scrambles every
+sector at once, galaxy bias included, and returns to the ladder's
+final point: the pipeline must reproduce the recorded data vector and $\chi^2$ bit for
 bit, and a second instance walking the mirrored sector order must
 land on the same vector. The shear-calibration steps must equal the
 analytic $(1+m_i)(1+m_j)$ block rescale to $10^{-12}$, a no-op update
@@ -581,14 +598,16 @@ TATT ladder exercises the FAST-PT rebuild machinery).
 
 ## :interrobang: FAQ: Do the tests keep their own data? <a name="frozen_copy"></a>
 
-The tests read nothing from the live project: not `../data`, not the
-`EXAMPLE_EVALUATE` yaml files, and not the likelihood default yaml
-files. Instead, `frozen/` holds:
+The tests read no live data or example files: not `../data` and not
+the `EXAMPLE_EVALUATE` yaml files. Cobaya still loads the likelihood
+classes with their default yaml files, but the frozen configurations
+override every option and parameter they list. Instead, `frozen/` holds:
 
 | `frozen/` entry | holds |
 |---|---|
 | `frozen_config_example*.py` | the complete cobaya configuration as a yaml string, plus the exact evaluation point |
-| `data/` | the tests' own copy of the data vectors, covariances, n(z), and masks of both data sets |
+| `data/` | the tests' own copy of the data vectors, covariances, n(z), and masks of both data sets, plus the synthetic and baryonic-feedback data vectors the tests evaluate against |
+| `reference_chi2.json` | the twelve reference $\chi^2$ values, one per configuration and intrinsic-alignment model |
 | `EXAMPLE_EVALUATE{1,2,3,4}.yaml` | snapshots kept only so a human can diff how the live examples drifted since the freeze |
 
 In the configuration modules every option and every parameter is
@@ -597,12 +616,12 @@ written out, including the ones that normally come from
 files cannot change what the tests evaluate.
 
 
-`manifest_sha256.json` stores a SHA-256 hash (a fingerprint that
+`tests/manifest_sha256.json` stores a SHA-256 hash (a fingerprint that
 changes when any byte changes) of every file under `frozen/`. Each test
-verifies the manifest first and refuses to run when a file under `frozen/` was
-edited, naming the file. The result: users may change the live data
-and examples freely, and nobody can quietly edit the snapshot
-either.
+class verifies the manifest before its tests run and refuses to run when
+a file under `frozen/` was edited, added or removed, naming the file.
+The result: users may change the live data and examples freely, and
+nobody can quietly edit the snapshot either.
 
 ## :interrobang: FAQ: Why do the tests use their own data vectors? <a name="synthetic_vectors"></a>
 
@@ -623,11 +642,9 @@ Within a data set the full-length 3x2pt vector serves every probe
 response is quadratic and the drift and accuracy numbers stay
 meaningful.
 
-## :interrobang: FAQ: Why were the references refrozen on 2026-09-28? <a name="gg_growth_fix"></a>
+## :interrobang: FAQ: Why does the non-Limber clustering subtract a separable-growth term? <a name="gg_growth_fix"></a>
 
-On 2026-09-28 the non-Limber galaxy clustering spectrum
-$C_\ell^{gg}$ was fixed and the snapshot was refrozen. The bug:
-below $\ell = 150$ cosmolike's `C_cl_tomo` computes
+Below $\ell = 150$ cosmolike's `C_cl_tomo` computes
 
 $$C_\ell = C_\ell^{\rm FFTLog}(P_{\rm lin}) + C_\ell^{\rm Limber}(P_\delta) - C_\ell^{\rm Limber}(P_{\rm lin}),$$
 
@@ -635,31 +652,18 @@ an exact FFTLog projection of the linear power spectrum plus, in the
 Limber approximation, what linear theory misses. Where the Limber
 approximation holds (high $\ell$) the first and third terms must
 converge to the same number and cancel, leaving the Limber
-$C_\ell^{gg}$. The FFTLog term needs separable growth,
-$D(z_1) D(z_2) P_{\rm lin}(k, z=0)$, but the subtracted Limber term
-used CAMB's $P_{\rm lin}(k, z)$, whose growth depends on scale
-(massive neutrinos): the two differ by 0.7% at $z = 0.3$ and 1.6% at
-$z = 1$. The pair never cancelled. Every $C_\ell^{gg}$ below the switch
-to Limber carried a -0.85% to -1.6% offset, and the 1% early exit
-fired near $\ell = 50$, where the decaying non-Limber correction
-happened to cancel the offset, dropping a real 1.3% to 2.2%
-correction for the highest lens bins. With the fix the subtracted
-term uses $D(a)^2 P_{\rm lin}(k, z=0)$, and the two terms agree to
-0.02% to 0.17% at $\ell = 149$.
+$C_\ell^{gg}$. The FFTLog term needs a separable linear spectrum,
+$(D(a)/D(a_{\rm piv}))^2 P_{\rm lin}(k, a_{\rm piv})$, anchored at a
+pivot scale factor $a_{\rm piv}$ of each lens bin, so the subtracted
+Limber term uses the identical separable form.
 
-The fix changes $w(\theta)$ only; cosmic shear and galaxy-galaxy
-lensing are unchanged. Against the pre-fix references, measured on
-2026-09-28 before the refreeze:
-
-- Y3 3x2pt (tests 5, 7): $\chi^2 = 0.168$ against the reference 0;
-  Y3 2x2pt (tests 11, 13): 0.167 against 0.
-- Y1 3x2pt (tests 19, 21): 0.030 against 0; Y1 2x2pt (tests 23, 25):
-  0.029 against 0.
-- All pass (limit 0.2), the Y3 checks close to the limit.
-
-The refreeze (next FAQ) regenerated the frozen fiducial model
-vectors with the fixed code and made the new $\chi^2$ values the
-references; the drift is absorbed.
+CAMB's $P_{\rm lin}(k, a)$ would not cancel the FFTLog term: massive
+neutrinos make its growth scale dependent, and an uncancelled pair
+leaves an offset in every $C_\ell^{gg}$ below the switch to Limber.
+The scale-dependent part of the growth stays in the Limber $P_\delta$
+term, where the split puts it. The non-Limber galaxy-galaxy lensing
+spectrum of `C_gs_tomo` (`adopt_limber_gs: 0`) uses the same
+separable form.
 
 ## :interrobang: FAQ: How can maintainers refresh the snapshot? <a name="refreeze"></a>
 
@@ -679,7 +683,15 @@ the script `start_cocoa.sh`
 
     python ./projects/des_y3/tests/generate_frozen_reference.py --overwrite
 
-It rebuilds `frozen/` from the current project, prints the twelve new
-reference $\chi^2$ values, and rewrites the manifest. Review the printed
-$\chi^2$ values against the old references before committing: they define
-what every later test run compares against.
+It deletes `frozen/`, rebuilds it from the current project, prints the
+twelve new reference $\chi^2$ values, and rewrites the manifest. It does
+not regenerate the baryonic-feedback vectors of the drift tests.
+
+**Step :three:**: regenerate the baryonic-feedback vectors and re-pin
+the manifest
+
+    python ./projects/des_y3/tests/generate_frozen_reference.py --baryons
+
+Review the printed $\chi^2$ values against the committed references
+before committing: they define what every later test run compares
+against.

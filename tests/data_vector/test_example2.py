@@ -6,15 +6,19 @@ des_y3.combo_3x2pt likelihood, evaluated on the frozen copy of
 example2's configuration (see cocoa_test_utils for what "frozen"
 means and why). The four tests:
 
-  5. chi2 at the frozen fiducial point, within CHI2_TOLERANCE (0.2) of
-     the frozen reference value.
+  5. chi2 at the frozen fiducial point, against the synthetic NLA
+     data vector generated at that point (so the chi2 sits at its
+     minimum), within CHI2_TOLERANCE (0.2) of the frozen reference
+     value.
   6. race check: on one model, the fiducial evaluated fresh and again
      as the 10th of 10 cosmologies in a row must agree to
      RACE_TOLERANCE (1e-4). A disagreement means state leaked between
-     evaluations or OpenMP threads raced.
+     evaluations or OpenMP threads raced (wrote shared memory in an
+     order that changes from run to run).
   7. the same comparison as test 5 with the TATT intrinsic-alignment
-     model (IA_model: 1) and DES_A2_1 = 0.05, DES_BTA_1 = 0.05,
-     DES_A2_2 = -1.51541 replacing the NLA point's zeros.
+     model (IA_model: 1), against the TATT-generated data vector,
+     with DES_A2_1 = 0.05, DES_BTA_1 = 0.05 and DES_A2_2 = -1.51541
+     (all three are zero at the NLA point).
   8. the same race check as test 6 with the TATT model.
 
 To run (from the Cocoa/ folder, cocoa environment active,
@@ -26,7 +30,9 @@ start_cocoa.sh sourced):
 import os
 
 # OpenMP reads OMP_NUM_THREADS when the compiled libraries load, so
-# this must run before ANY cobaya/cosmolike import in the process.
+# this must run before any cobaya or cosmolike import in the process.
+# 4 is REQUIRED_OMP_THREADS of cocoa_testing.py: a race between
+# OpenMP threads can only show up when several threads run.
 os.environ["OMP_NUM_THREADS"] = "4"
 
 import sys
@@ -43,10 +49,11 @@ EXAMPLE = "example2"
 class TestExample2ThreeXTwo(unittest.TestCase):
     """Tests 5-8, sharing one frozen-state verification.
 
-    setUpClass runs once before the tests: it moves to ROOTDIR,
-    verifies every frozen file against the SHA-256 manifest (an edited
-    frozen state must fail loudly before any physics runs), and loads
-    the frozen reference chi2 values.
+    setUpClass runs once before the tests: it moves to ROOTDIR (the
+    Cocoa/ folder, exported by start_cocoa.sh), verifies every frozen
+    file against the SHA-256 manifest (an edited frozen state must fail
+    loudly before any physics runs), and loads the frozen reference chi2
+    values.
     """
 
     # the classmethod decorator hands the method the class itself
@@ -54,6 +61,7 @@ class TestExample2ThreeXTwo(unittest.TestCase):
     # the first test of the class
     @classmethod
     def setUpClass(cls):
+        """Check the environment and the frozen files; load the references."""
         u.require_cocoa_environment()
         u.verify_frozen()
         cls.reference = u.load_reference()

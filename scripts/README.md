@@ -11,6 +11,16 @@ edges of the histogram cells (`--zcolumn zleft`) or as their centers
 tells cosmolike which of the two it reads, so each choice pairs with one
 value of the key.
 
+```mermaid
+flowchart TD
+  A["data/*.fits: the DES-Y3 and DES-Y1 2pt files"] --> B["make_nz_from_fits.py"]
+  B --> C["--zcolumn zleft: the shipped .nz tables"]
+  B --> D["--zcolumn zcenter: *_zcenter.nz and a *_zcenter.dataset"]
+  C --> E["photoz_zmid_convention: 0, in every likelihood yaml"]
+  D --> F["photoz_zmid_convention: 1"]
+  C --> G["tests/frozen/data: the tests' copy, written by generate_frozen_reference.py"]
+```
+
 # Table of contents
 
 1. [Running the n(z) script](#run_nz)
@@ -20,10 +30,9 @@ value of the key.
 3. [The z column and `photoz_zmid_convention`](#zcolumn)
 4. [Appendix](#appendix)
     1. [FAQ: Why does the DES-Y3 lens z column start at 0.005?](#lens_z_column)
-    2. [FAQ: Why was `des_y3_lens.nz` rewritten?](#stray_value)
-    3. [FAQ: Why do the zcenter tables not reproduce the zleft tables?](#zcenter_mismatch)
-    4. [FAQ: Why does the script drop some cells?](#dropped_cells)
-    5. [FAQ: What if the script reports a git LFS pointer?](#lfs_pointer)
+    2. [FAQ: Why do the zcenter tables not reproduce the zleft tables?](#zcenter_mismatch)
+    3. [FAQ: Why does the script drop some cells?](#dropped_cells)
+    4. [FAQ: What if the script reports a git LFS pointer?](#lfs_pointer)
 
 ## Running the n(z) script <a name="run_nz"></a>
 
@@ -122,8 +131,8 @@ byte size of the DES release file
 DES-Y3 MagLim FITS file (6 lens bins) is a different analysis and is not
 in this project.
 
-Every data file the two dataset files name is a copy of one FITS
-extension:
+Every data vector, covariance and n(z) file the two dataset files name
+is a copy of one FITS extension:
 
 | file in `data/` | FITS file | FITS extension |
 |---|---|---|
@@ -136,8 +145,8 @@ extension:
 | `des_y1_lens.nz` | DES-Y1 | `nz_lens`, cells 0 to 399 |
 | `des_y1_source.nz` | DES-Y1 | `nz_source`, cells 0 to 399 |
 
-Every number in these files equals its FITS value bit for bit (checked
-on 2026-09-29). The DES-Y1 data vector file says `1101` in its name, the
+Every number in these files equals its FITS value bit for bit. The
+DES-Y1 data vector file says `1101` in its name, the
 FITS file `1110`; the numbers are the same. The covariance
 `COV2_Y1_mcal_v04.17_3column_rr` differs from the DES-Y1 `COVMAT`, and no
 dataset file reads it.
@@ -182,8 +191,8 @@ match:
 
 A table read with the other value of the key moves every distribution
 rigidly by $\Delta z/2 = 0.005$ in redshift. The test file
-`tests/test_photoz_conventions.py` measures that shift on cosmic shear
-(tests/README.md, section "The photo-z convention checks").
+`tests/data_vector/test_photoz_conventions.py` measures that shift on cosmic
+shear ([the photo-z convention checks](../tests/data_vector/README.md#photoz_conventions)).
 
 # Appendix <a name="appendix"></a>
 
@@ -193,40 +202,16 @@ The redMaGiC cells of the DES-Y3 FITS file are centered on multiples of
 0.01: the first cell is $[-0.005, 0.005]$, the second $[0.005, 0.015]$.
 The value 0.005 is therefore the left edge of the second cell, not a
 center, and `des_y3_lens.nz` starts there because the empty first cell
-is dropped (next FAQs). The source cells start at 0 and are centered on
+is dropped ([FAQ: Why does the script drop some cells?](#dropped_cells)).
+The source cells start at 0 and are centered on
 0.005, 0.015, ..., so the source column starts at 0. Both tables hold
 `Z_LOW`, and `photoz_zmid_convention: 0` reads both correctly.
 
 Shifting the lens column by $-\Delta z/2$ (reading 0.005 as a center)
 would move every lens distribution half a cell below its FITS position.
-Measured on 2026-09-29, before `des_y3_lens.nz` was rewritten:
-
-- `EXAMPLE_EVALUATE2.yaml` (3x2pt against the DES-Y3 data): $\chi^2$
-  from 896.270 to 902.717.
-- At the 3x2pt point of the tests, $\delta^T C^{-1} \delta = 2.10$
-  ($\delta$ = the data-vector difference, $C^{-1}$ = the masked inverse
-  covariance): 2.03 from galaxy-galaxy lensing, 0.41 from clustering.
-
-## :interrobang: FAQ: Why was `des_y3_lens.nz` rewritten? <a name="stray_value"></a>
-
-The first row of `des_y3_lens.nz` carried the value 0.1 in lens bin 5 at
-$z = 0.005$; the FITS file has 0 there. The value had been in the file
-since it entered the repository, and no record says where it came from. It
-put 0.1% of bin 5 at $z \approx 0.01$, far below the bin's support
-($0.285 < z < 1.195$). Rewriting the table with `make_nz_from_fits.py`
-changes this one value and nothing else.
-
-Measured on 2026-09-29:
-
-- `EXAMPLE_EVALUATE2.yaml` (3x2pt against the DES-Y3 data): $\chi^2$
-  from 896.270 to 897.776.
-- At the 3x2pt point of the tests, $\delta^T C^{-1} \delta = 0.0064$,
-  all from lens bin 5: clustering 0.0064, galaxy-galaxy lensing 0.0001.
-- Cosmic shear and every DES-Y1 configuration: unchanged bit for bit.
-
-The tests keep their own copy under `tests/frozen/data`, which holds the
-table with the stray value until the snapshot is refreshed
-(tests/README.md, FAQ: How can maintainers refresh the snapshot?).
+Measured at the 3x2pt point of the tests: $\delta^T C^{-1} \delta = 2.10$
+($\delta$ = the data-vector difference, $C^{-1}$ = the masked inverse
+covariance), 2.03 from galaxy-galaxy lensing and 0.41 from clustering.
 
 ## :interrobang: FAQ: Why do the zcenter tables not reproduce the zleft tables? <a name="zcenter_mismatch"></a>
 
@@ -249,7 +234,7 @@ vectors. They do not, because of two effects in cosmolike's n(z) reader
    nonzero rows, without the convention. With zleft the range ends half
    a cell below the last evaluation point; with zcenter it ends on it.
 
-Measured on 2026-09-29, zcenter with `1` against zleft with `0`:
+Measured, zcenter with `1` against zleft with `0`:
 
 - `EXAMPLE_EVALUATE2.yaml` (3x2pt, DES-Y3): $\delta^T C^{-1} \delta = 0.12$;
   $\chi^2$ against the data from 897.776 to 898.799.

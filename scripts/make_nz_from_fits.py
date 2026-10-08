@@ -17,8 +17,8 @@ per redshift cell of width dz, with three redshift columns
     Z_HIGH = right edge of the cell
 
 and one column BIN1, BIN2, ... per tomographic bin. This script copies
-the BIN columns unchanged and writes ONE of the redshift columns as
-column 0 of the text table:
+the BIN columns unchanged and writes one of the redshift columns, chosen
+with --zcolumn, as column 0 of the text table:
 
     --zcolumn zleft    column 0 = Z_LOW  -> set photoz_zmid_convention: 0
     --zcolumn zcenter  column 0 = Z_MID  -> set photoz_zmid_convention: 1
@@ -397,6 +397,10 @@ def main():
       suffix for --zcolumn zcenter) and, for zcenter, the dataset file
       data/<dataset name>_zcenter.dataset. Existing files are replaced
       only with --overwrite.
+
+    Returns:
+      0, the exit status of a successful run; every failure stops earlier
+      through sys.exit with a message naming the problem.
     """
     parser = argparse.ArgumentParser(
         description=__doc__,

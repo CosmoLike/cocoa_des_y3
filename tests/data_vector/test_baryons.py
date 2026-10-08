@@ -1,14 +1,18 @@
 """Baryonic feedback drift tests BD1-BD7: frozen-vector pinning.
 
 Each test evaluates the example1 configuration (NLA) with the bfmt
-theory block computing one feedback method, against that method's
-FROZEN data vector - the default-settings theory prediction written
-at freeze time by generate_frozen_reference.py --baryons, at the
-frozen fiducial point plus the method's cosmology override
+theory block computing one feedback method. bfmt is the Cobaya theory
+component that computes the baryonic-feedback suppression
+S(k, z) = P(k, z) with feedback / P(k, z) of dark matter only, which the
+likelihood applies to its nonlinear matter power (the option
+external_baryon_suppression). The chi2 is computed against that
+method's frozen data vector: the default-settings theory prediction
+written at freeze time by generate_frozen_reference.py --baryons, at
+the frozen fiducial point plus the method's cosmology override
 (cocoa_test_utils.BARYON_POINT_OVERRIDES). At freeze time the chi2
 against that vector was zero by construction, so the assertion
 
-    chi2 <= chi2_tolerance
+    chi2 <= CHI2_TOLERANCE (0.2)
 
 pins the whole feedback pipeline: a failure means cosmolike or the
 bfmt theory block changed its prediction since the freeze. This is
@@ -33,7 +37,9 @@ active, start_cocoa.sh sourced):
 import os
 
 # OpenMP reads OMP_NUM_THREADS when the compiled libraries load, so
-# this must run before ANY cobaya/cosmolike import in the process.
+# this must run before any cobaya or cosmolike import in the process.
+# 4 is REQUIRED_OMP_THREADS of cocoa_testing.py: a race between
+# OpenMP threads can only show up when several threads run.
 os.environ["OMP_NUM_THREADS"] = "4"
 
 import sys
@@ -48,12 +54,17 @@ import cocoa_test_utils as u
 class TestBaryonDrift(unittest.TestCase):
     """Drift tests BD1-BD7: the feedback pipeline against its freeze.
 
-    setUpClass runs once: it moves to ROOTDIR and verifies every
-    frozen file against the SHA-256 manifest before any physics runs.
+    setUpClass runs once: it moves to ROOTDIR (the Cocoa/ folder,
+    exported by start_cocoa.sh) and verifies every frozen file against
+    the SHA-256 manifest before any physics runs.
     """
 
+    # the classmethod decorator hands the method the class itself
+    # (cls), not an instance; unittest calls setUpClass once before
+    # the first test of the class
     @classmethod
     def setUpClass(cls):
+        """Check the environment and the frozen files before any test."""
         u.require_cocoa_environment()
         u.verify_frozen()
 
@@ -64,8 +75,14 @@ class TestBaryonDrift(unittest.TestCase):
           name   = the test label (BD1-BD7) for the report.
           baryon = a label of cocoa_test_utils.BARYON_METHODS.
           label  = one line naming the feedback method.
+
+        Returns:
+          nothing; the test fails (AssertionError) when the chi2 exceeds
+          CHI2_TOLERANCE.
         """
         chi2 = u.baryon_drift_chi2(baryon)
+        # a triple-quoted f-string spans several lines; {'-' * 66} is a
+        # rule of 66 dashes
         print(f"""
 {'-' * 66}
 DRIFT: {name}: {label}

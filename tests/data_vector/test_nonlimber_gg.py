@@ -6,8 +6,9 @@ likelihood yaml key adopt_limber_gg chooses how it is computed:
 
   adopt_limber_gg: 0 - below l = 150 the exact projection, computed by
       cosmolike's C_cl_tomo with the split of Fang, Krause, Eifler &
-      MacCrann (arXiv:1911.11947): an FFTLog integral of the linear
-      power spectrum plus, in Limber, what linear theory misses. In
+      MacCrann (arXiv:1911.11947): an FFTLog integral (a fast
+      Hankel-type transform on a logarithmic grid) of the linear power
+      spectrum plus, in Limber, what linear theory misses. In
       Fourier space each band center takes the Limber value plus the
       non-Limber correction interpolated between integer multipoles.
   adopt_limber_gg: 1 - Limber approximation at every multipole.
@@ -17,9 +18,9 @@ lens galaxy redshift distributions are narrow, so the Limber
 approximation fails at low l for the clustering auto spectra; this
 test measures by how much.
 
-It evaluates the frozen 3x2pt fiducial (NLA) three times IN ONE
-PROCESS: the default, the other setting, the default again, and
-computes
+It evaluates the frozen 3x2pt fiducial (NLA) three times in one
+process (so the clustering cache must notice each flag change): the
+default, the other setting, the default again, and computes
 
     delta chi2 = delta^T C^-1 delta,
     delta = dv(non-Limber) - dv(Limber),
@@ -53,7 +54,9 @@ start_cocoa.sh sourced):
 import os
 
 # OpenMP reads OMP_NUM_THREADS when the compiled libraries load, so
-# this must run before ANY cobaya/cosmolike import in the process.
+# this must run before any cobaya or cosmolike import in the process.
+# 4 is REQUIRED_OMP_THREADS of cocoa_testing.py: a race between
+# OpenMP threads can only show up when several threads run.
 os.environ["OMP_NUM_THREADS"] = "4"
 
 import sys
@@ -71,8 +74,8 @@ REFERENCE_KEY = "example2_nla"
 # adopt_limber_gg of the likelihood yamls of this project
 DEFAULT = 0
 
-# (report tag, adopt_limber_gg): the default, the other setting, the
-# default again
+# (report tag, adopt_limber_gg): the default, the other setting
+# (1 - DEFAULT flips 0 and 1), the default again
 _NAME = {0: "non-Limber", 1: "Limber"}
 SETTINGS = (
     (f"{_NAME[DEFAULT]} (default)", DEFAULT),
@@ -85,8 +88,8 @@ SETTINGS = (
 # dead flag.
 DCHI2_FLOOR = 1.0e-6
 
-# delta chi2 measured on 2026-10-01 (macOS, arm64), and the relative band
-# assertion 4 allows around it.
+# delta chi2 measured for this project (macOS, arm64), and the relative
+# band (5%) assertion 4 allows around it.
 DCHI2_MEASURED = 9.492
 DCHI2_RTOL = 0.05
 
@@ -94,13 +97,18 @@ DCHI2_RTOL = 0.05
 class TestNonLimberGG(unittest.TestCase):
     """Limber vs non-Limber galaxy clustering on the frozen fiducial."""
 
+    # the classmethod decorator hands the method the class itself
+    # (cls), not an instance; unittest calls setUpClass once before
+    # the first test of the class
     @classmethod
     def setUpClass(cls):
+        """Check the environment and the frozen files; load the references."""
         u.require_cocoa_environment()
         u.verify_frozen()
         cls.reference = u.load_reference()
 
     def test_nonlimber_gg(self):
+        """Run the three evaluations and assert checks 1-5 of the module docstring."""
         import numpy as np
         import cosmolike_des_y3_interface as ci
 
@@ -136,9 +144,12 @@ class TestNonLimberGG(unittest.TestCase):
                     sizes = ci.compute_data_vector_3x2pt_fourier_sizes()
                     nlen = int(like.ncl)
 
+        # {flag: tag} for the first two settings, so the vectors can be
+        # looked up by adopt_limber_gg value
         tags = {flag: tag for tag, flag in SETTINGS[:2]}
         dv_default = vectors[SETTINGS[0][0]]
         delta = vectors[tags[0]] - vectors[tags[1]]
+        # @ is the matrix product: delta^T C^-1 delta
         dchi2 = float(delta @ icov @ delta)
 
         # the clustering block follows cosmic shear and galaxy-galaxy
@@ -161,6 +172,8 @@ class TestNonLimberGG(unittest.TestCase):
             sl = slice(gg0 + b*nlen, gg0 + (b + 1)*nlen)
             block[sl] = delta[sl]
             rows.append((float(block @ icov @ block), b))
+        # sorted(..., reverse=True) lists the largest contribution
+        # first; the loop stops at contributions below 0.1% of the total
         for contribution, b in sorted(rows, reverse=True):
             if contribution < 1.0e-3*max(dchi2, DCHI2_FLOOR):
                 break
@@ -190,7 +203,8 @@ class TestNonLimberGG(unittest.TestCase):
             f"{DCHI2_MEASURED:.4f} by more than {DCHI2_RTOL:.0%}")
 
         # last, so that a stale frozen snapshot does not hide the four
-        # checks above
+        # checks above; the default setting is the frozen configuration,
+        # so its chi2 must match the frozen reference
         self.assertLess(
             abs(chi2s[SETTINGS[0][0]] - self.reference[REFERENCE_KEY]),
             u.CHI2_TOLERANCE,

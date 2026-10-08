@@ -1,8 +1,8 @@
 # Table of contents
 
 1. [Overview](#overview)
-2. [Running the covariance notebook](#running)
-   - [Running from the command line](#command_line)
+2. [Running from the command line](#command_line)
+   - [Running the covariance notebook](#running)
 3. [Changing the covariance accuracy](#accuracy)
 4. [Reading the figures](#figures)
 5. [Running the tests](#tests)
@@ -12,8 +12,15 @@
    2. [FAQ: What does the calculation include?](#gaussian)
    3. [FAQ: How can users check convergence?](#convergence)
    4. [FAQ: How can users reuse the calculation?](#reuse)
+   5. [FAQ: Which accuracy settings are available?](#accuracy-settings)
+   6. [Choosing the Gaussian spectra](#gaussian-spectra)
 
 # Overview <a name="overview"></a>
+
+> [!WARNING]
+> **CLI for production; notebook wrappers for exploration.** Both routes
+> share the same C kernels and survey inputs. Notebook array conversion and
+> rearrangement add overhead; use the CLI for production and HPC runs.
 
 [EXAMPLE_EVALUATE_COVARIANCE.ipynb](../EXAMPLE_EVALUATE_COVARIANCE.ipynb)
 computes an analogous real-space 3×2pt covariance for
@@ -48,68 +55,6 @@ zero wavenumber. Higher moments use their converged direct integrals.
 The fitted halo bias and multiplicity conventions are unchanged. See the
 [core halo-moment explanation](https://github.com/CosmoLike/cocoa-cosmolike-core/tree/bugfix/cosmolike/covariances#why-only-i11-uses-wynn-extrapolation).
 
-# Running the covariance notebook <a name="running"></a>
-
-The default build omits covariance generation. Unset
-`IGNORE_COSMOLIKE_DES_Y3_COVARIANCE` after activating Cocoa, then recompile
-as below. Likelihood evaluation with a supplied covariance remains available
-in either build. Restart the Jupyter kernel after a rebuild. To retain this
-choice across sessions, comment out the matching export in
-[`set_installation_options.sh`](../../../set_installation_options.sh).
-
-We assume Cocoa and the DES Y3 project are installed, users have run
-`conda activate cocoa`, the shell is Bash, and the current folder is
-`cocoa/Cocoa`. The notebook uses the Python environment activated by Cocoa.
-
-**Step :one:**: activate Cocoa's private Python environment.
-
-    source start_cocoa.sh
-
-**Step :two:**: compile the DES Y3 interface, including the covariance components.
-
-    unset IGNORE_COSMOLIKE_DES_Y3_CODE
-    unset IGNORE_COSMOLIKE_DES_Y3_COVARIANCE
-    source ./projects/des_y3/scripts/compile_des_y3.sh
-
-**Step :three:**: start Jupyter.
-
-    jupyter notebook --no-browser --port=8888
-
-**Step :four:**: open the URL printed by Jupyter and select
-`projects/des_y3/EXAMPLE_EVALUATE_COVARIANCE.ipynb`.
-
-**Step :five:**: select **Kernel → Restart Kernel and Run All Cells**.
-
-The notebook starts with `boosts = [1]` and `spaces = ["real"]`.
-It computes the native matrix, applies the selected dataset's mask, reports
-positivity and plots the computed components and supplied total. Set
-`boosts = [1, 2]` to add the numerical-refinement comparison.
-
-The **See the 1h, 2h, 3h and 4h matter trispectra** section can be run
-immediately after initialization, before computing the full covariance.
-It plots the diagonal matter trispectrum at `halo_redshift = 0.5`, with
-the two-halo term combining its 1+3 and 2+2 partitions. Both partitions
-and all sampled wavenumber pairs remain available as notebook arrays.
-These are matter terms before survey projection; G and SSC are separate.
-
-| Output in `covariance/` | Contents |
-| --- | --- |
-| `forecast_real.npz` | Full computed G, SSC, cNG, total, ordering and settings. |
-| `forecast_likelihood_selection.npz` | Cut components, supplied total, original entry indices and probe labels. |
-| `forecast_camb.npz` | CAMB tables used by the native calculation. |
-
-Rerunning the final cell replaces these computed output files.
-
-> [!NOTE]
-> The notebook assigns eight threads to CosmoLike's OpenMP loops and
-> one thread to BLAS. Change `ci.set_omp_threads(n=8)` in the notebook
-> if fewer cores are available. Run one calculation at a time when
-> measuring execution time.
-
-> [!TIP]
-> To inspect the forecast inputs before running CAMB, see
-> [which survey the example uses](#survey).
-
 # Running from the command line <a name="command_line"></a>
 
 The Python runner computes the full galaxy–shear covariance in real space,
@@ -117,11 +62,9 @@ using the optimized production interface. It saves G, SSC, cNG and their
 sum without plotting or opening a notebook. Numerical kernels and survey
 settings are shared with the notebook calculation.
 
-The supplied evaluate YAML constructs the full **900 × 900**
-galaxy/shear covariance in **45.04 seconds** on an Apple M2 Pro
-with eight OpenMP threads (mean of three fresh, sequential CLI runs
-on 2026-10-05). Gaussian clustering and galaxy–shear spectra include non-Limber
-corrections; the example uses zero IA.
+The current [production timing table](https://github.com/CosmoLike/cocoa)
+reports **50.8 seconds** for this project on an Apple M2 Pro with
+eight OpenMP threads (mean of three sequential CLI runs).
 
 This interval includes first-use CosmoLike tables, spectra, halo
 calculations, transforms and complete G + SSC + cNG matrix assembly.
@@ -129,19 +72,28 @@ Initial survey/CAMB setup, diagnostics and file writing are excluded.
 
 From Bash in `cocoa/Cocoa`, with `conda activate cocoa`:
 
-**Step :one:**: activate Cocoa and enable covariance generation.
+**Step :one:**: activate Cocoa.
 
     source start_cocoa.sh
+
+**Step :two:**: enable the installed project.
+
     unset IGNORE_COSMOLIKE_DES_Y3_CODE
+
+**Step :three:**: enable covariance generation.
+
     unset IGNORE_COSMOLIKE_DES_Y3_COVARIANCE
 
-**Step :two:**: compile the project interface.
+**Step :four:**: compile the project interface.
 
     source ./projects/des_y3/scripts/compile_des_y3.sh
 
-**Step :three:**: inspect the YAML cosmology and compute the matrix components.
+**Step :five:**: select the OpenMP team size.
 
     export OMP_NUM_THREADS=8
+
+**Step :six:**: run the CLI.
+
     python ./projects/des_y3/covariance/compute_covariance.py \
         ./projects/des_y3/EXAMPLE_EVALUATE_COVARIANCE.yaml
 
@@ -170,6 +122,76 @@ Paths in the YAML are relative to the working directory, `cocoa/Cocoa`.
 `output` names the `.npz` archive; `--output` can override it for an HPC
 job. Set `OMP_NUM_THREADS` in that job’s environment. `--help` lists the
 command options.
+
+# Running the covariance notebook <a name="running"></a>
+
+The default build omits covariance generation. Unset
+`IGNORE_COSMOLIKE_DES_Y3_COVARIANCE` after activating Cocoa, then recompile
+as below. Likelihood evaluation with a supplied covariance remains available
+in either build. Restart the Jupyter kernel after a rebuild. To retain this
+choice across sessions, comment out the matching export in
+[`set_installation_options.sh`](https://github.com/CosmoLike/cocoa/blob/main/Cocoa/set_installation_options.sh).
+
+We assume Cocoa and the DES Y3 project are installed, users have run
+`conda activate cocoa`, the shell is Bash, and the current folder is
+`cocoa/Cocoa`. The notebook uses the Python environment activated by Cocoa.
+
+**Step :one:**: activate Cocoa's private Python environment.
+
+    source start_cocoa.sh
+
+**Step :two:**: enable the installed project.
+
+    unset IGNORE_COSMOLIKE_DES_Y3_CODE
+
+**Step :three:**: enable covariance generation.
+
+    unset IGNORE_COSMOLIKE_DES_Y3_COVARIANCE
+
+**Step :four:**: compile the interface.
+
+    source ./projects/des_y3/scripts/compile_des_y3.sh
+
+**Step :five:**: start Jupyter.
+
+    jupyter notebook --no-browser --port=8888
+
+**Step :six:**: open the URL printed by Jupyter and select
+`projects/des_y3/EXAMPLE_EVALUATE_COVARIANCE.ipynb`.
+
+**Step :seven:**: select **Kernel → Restart Kernel and Run All Cells**.
+
+The notebook starts with `boosts = [1]` and `spaces = ["real"]`.
+It computes the native matrix, applies the selected dataset's mask, reports
+positivity and plots the computed components and supplied total. It then reads
+the eigenvalues of every component and bounds the forecast-to-supplied variance
+ratio over all linear combinations of the retained entries. Set
+`boosts = [1, 2]` to add the numerical-refinement comparison.
+
+The **See the 1h, 2h, 3h and 4h matter trispectra** section can be run
+immediately after initialization, before computing the full covariance.
+It plots the diagonal matter trispectrum at `halo_redshift = 0.5`, with
+the two-halo term combining its 1+3 and 2+2 partitions. Both partitions
+and all sampled wavenumber pairs remain available as notebook arrays.
+These are matter terms before survey projection; G and SSC are separate.
+
+| Output in `covariance/` | Contents |
+| --- | --- |
+| `forecast_real.npz` | Full computed G, SSC, cNG, total, ordering and settings. |
+| `forecast_likelihood_selection.npz` | Cut components, supplied total, original entry indices and probe labels. |
+| `forecast_camb.npz` | CAMB tables used by the native calculation. |
+
+Rerunning the final cell replaces these computed output files.
+
+> [!NOTE]
+> The notebook assigns eight threads to CosmoLike's OpenMP loops and
+> one thread to BLAS. Change `ci.set_omp_threads(n=8)` in the notebook
+> if fewer cores are available. Run one calculation at a time when
+> measuring execution time.
+
+> [!TIP]
+> To inspect the forecast inputs before running CAMB, see
+> [which survey the example uses](#survey).
 
 # Changing the covariance accuracy <a name="accuracy"></a>
 
@@ -252,8 +274,10 @@ plots and variance-ratio table.
 
 | Figure | What it teaches |
 | --- | --- |
-| Split-triangle correlation matrix | Compare the generated native-space covariance in the lower triangle with the supplied likelihood covariance in the upper triangle, after the same cuts. Each uses its own diagonal normalization. |
+| Split-triangle correlation matrix | Compare the generated native-space covariance, drawn above the diagonal, with the supplied likelihood covariance, drawn below it, after the same cuts. Index 0 sits at the bottom left, so the title's "Lower" and "Upper" name matrix triangles (row > column and row < column), not screen positions. Each uses its own diagonal normalization. |
 | G, SSC and cNG maps and histograms | Compare each component after normalization by the total diagonal variances. |
+| Correlation eigenvalues | Sort the eigenvalues of the computed and supplied totals after the same cuts; the smallest modes are the ones an inverse amplifies most. |
+| Element-ratio maps | Divide each component by the total entry by entry; entries with weak total correlation are grey and left out of the histogram. |
 | Halo trispectrum diagonal | See 1h, combined 2h, 3h, 4h and their sum at a chosen redshift, before survey projection. The signed axis retains negative terms. |
 | Error changes | With multiple boosts, compare first-source-bin standard deviations with the highest tested boost, in percent, for the native measurement. |
 | Generalized-mode report | Bound variance changes over every linear combination of measurements. |
@@ -278,13 +302,19 @@ We assume users have run `conda activate cocoa`, use Bash, and are in
 
     source start_cocoa.sh
 
-**Step :two:**: enable and compile the covariance interface.
+**Step :two:**: enable the installed project.
 
     unset IGNORE_COSMOLIKE_DES_Y3_CODE
+
+**Step :three:**: enable covariance generation.
+
     unset IGNORE_COSMOLIKE_DES_Y3_COVARIANCE
+
+**Step :four:**: compile the interface.
+
     source ./projects/des_y3/scripts/compile_des_y3.sh
 
-**Step :three:**: run the covariance tests.
+**Step :five:**: run the covariance tests.
 
     python -m pytest projects/des_y3/tests/covariance
 
@@ -312,11 +342,50 @@ The [data-vector test guide](../tests/data_vector/README.md) explains them.
 | --- | --- |
 | [EXAMPLE_EVALUATE_COVARIANCE.ipynb](../EXAMPLE_EVALUATE_COVARIANCE.ipynb) | Run, refine and plot real/Fourier G, SSC and cNG matrices. |
 | [des_y3_covariance.py](des_y3_covariance.py) | Specify survey inputs, initialize this project's interface and call the shared calculation. |
-| [Shared covariance package](../../../external_modules/code/cosmolike_core/cosmolike_notebook_utils/covariance/README.md) | Reuse integration preparation, Gaussian assembly, halo inputs, accuracy settings and diagnostics. |
-| [Shared plotting script](../../../external_modules/code/cosmolike_core/cosmolike_notebook_utils/plot_covariances.py) | Plot covariance arrays from any project. |
-| [Covariance C files](../../../external_modules/code/cosmolike_core/cosmolike/covariances/README.md) | Read the physics and each compiled component's role. |
+| [Shared covariance package](https://github.com/CosmoLike/cocoa-cosmolike-core/blob/main/cosmolike_notebook_utils/covariance/README.md) | Reuse integration preparation, Gaussian assembly, halo inputs, accuracy settings and diagnostics. |
+| [Shared plotting script](https://github.com/CosmoLike/cocoa-cosmolike-core/blob/main/cosmolike_notebook_utils/plot_covariances.py) | Plot covariance arrays from any project. |
+| [Covariance C files](https://github.com/CosmoLike/cocoa-cosmolike-core/blob/main/cosmolike/covariances/README.md) | Read the physics and each compiled component's role. |
 
 # Appendix <a name="appendix"></a>
+
+## FAQ: Which accuracy settings are available? <a name="accuracy-settings"></a>
+
+Baseline values come from [`default.yaml`](default.yaml). Override them in
+the evaluate YAML's `covariance` block or pass them to `survey.configuration`.
+Reinitialize notebook inputs after changing the settings.
+
+| Control | Baseline | Purpose |
+|---|---:|---|
+| `accuracy_boost` | `1` | Overall table and cutoff refinement; 1, 2, 4 or 8. |
+| `integration_accuracy` | `0` | Independent quadrature level, 0 through 4. |
+| `power_accuracyboost` | `8` | Subdivisions of input log-k intervals; multiplied by the global boost. |
+| `ell_max` | `100000` | Real-space transform cutoff; Fourier measurement bands stay fixed. |
+| `mask_ell_max` | `32768` | Survey-footprint spectrum cutoff. |
+| `ng_ell_intervals` | `127` | Base log-multipole intervals for non-Gaussian interpolation. |
+| `non_gaussian_accuracyboost` | `1` | Refinement of the non-Gaussian multipole grid. |
+| `window_accuracyboost` | `1` | Lensing-window interpolation refinement. |
+| `core_accuracyboost` | `1` | Shared core interpolation refinement for this calculation. |
+| `response_step` | `5e-05` | Half-width of the log-k response derivative; divided by the global boost. |
+| `nonlimber_lmax` | `1000` | Gaussian gg/gs non-Limber correction cutoff. |
+| `nonlimber_accuracyboost` | `1` | Gaussian non-Limber distance-grid refinement. |
+
+| `integration_accuracy` | Ordinary nodes per panel | Wynn-tail nodes per panel |
+|---|---:|---:|
+| 0 | 96 | 32 |
+| 1 | 128 | 64 |
+| 2 | 256 | 128 |
+| 3 | 512 | 256 |
+| 4 | 1024 | 512 |
+
+The default power refinement prepares 11,993 samples from 1,500 inputs for
+linear, nonlinear and cold-matter power. It refines interpolation, not the
+Boltzmann solution itself, and does not affect ordinary data-vector runs.
+Thread counts are environment settings, not accuracy or YAML keys.
+
+Compare G, SSC, cNG and total, including off-diagonal elements, positivity
+and generalized variance ratios. Keep the cosmology, catalog and measured
+bins fixed while testing one control at a time. Integration, interpolation,
+cutoff and parameter-error convergence are separate questions.
 
 ## FAQ: Which survey does the example use? <a name="survey"></a>
 
@@ -332,7 +401,9 @@ The [DES Y3 covariance analysis](https://arxiv.org/abs/2012.08568)
 explains why catalog weights and footprint geometry matter; the cap is
 an approximation to that footprint.
 Lens densities use the same file's redMaGiC NGAL headers.
-The bias values are the lens-prior reference means in this project.
+The bias values are the centers (`loc`) of the `DES_B1_*` `ref` distributions
+in `likelihood/params_lens.yaml`, from which Cobaya draws MCMC starting points;
+the priors themselves are flat between 0.8 and 3.
 
 The angular bins follow the project, with five redMaGiC lens and four
 source bins. All measured galaxy–shear pairs are retained. Fourier bands
@@ -432,7 +503,7 @@ The C routines use OpenMP inside one process and never start MPI work.
 A future Python dispatcher can distribute those subblocks while keeping
 all cross correlations in the assembled matrix.
 
-## Choosing the Gaussian spectra
+## Choosing the Gaussian spectra <a name="gaussian-spectra"></a>
 
 The `gaussian` block selects the physics used in Gaussian covariance.
 `nonlimber: true` retains radial mode coupling for every galaxy–galaxy and

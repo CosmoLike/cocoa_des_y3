@@ -1,19 +1,25 @@
-"""Command line options for these tests (bound from cosmolike_core).
+"""Command-line options of these tests (bound from cosmolike_core).
 
-pytest requires a conftest.py inside each project's tests folder (it
-discovers the file by walking up from the collected tests), so this
-file cannot move; its content is the shared implementation in
-cosmolike_core/cocoa_testing.py, bound here the same way
-cocoa_test_utils.py binds the test harness. The --mask choices come
-from this project's harness (its fastpt_masks tuple).
+conftest.py is pytest's per-folder configuration file: pytest finds it by
+walking up from the collected test files and calls the hook functions it
+defines by their fixed names (pytest_addoption, pytest_configure). It
+therefore has to live in this project's tests folder. Its content is the
+shared implementation in cosmolike_core/cocoa_testing.py, bound here the
+same way cocoa_test_utils.py binds the test harness. The options are
+--high (repeat the CFASTPT-vs-FASTPT sweeps at the high-accuracy settings)
+and --mask (the scale-cut mask of the comparison sweeps); the --mask
+choices come from this project's harness (its fastpt_masks tuple,
+"frozen" and "ones").
 """
 
 import os
 import sys
 
-# The tests folder is not a package; put it on the import path so the
-# project shim resolves no matter where pytest was launched from (the
-# shim itself puts cosmolike_core on the path).
+# The tests folder is not a package; put it first on sys.path (the list
+# of folders Python searches on import) so cocoa_test_utils.py, the thin
+# project module that binds the shared machinery to this project, resolves
+# no matter where pytest was launched from. That module itself puts
+# cosmolike_core on the path.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cocoa_test_utils as u
 
