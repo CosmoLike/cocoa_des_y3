@@ -13,6 +13,7 @@
    3. [FAQ: How can users check convergence?](#convergence)
    4. [FAQ: How can users reuse the calculation?](#reuse)
    5. [FAQ: Which accuracy settings are available?](#accuracy-settings)
+   6. [Choosing the Gaussian spectra](#gaussian-spectra)
 
 # Overview <a name="overview"></a>
 
@@ -63,7 +64,7 @@ settings are shared with the notebook calculation.
 
 The current [production timing table](https://github.com/CosmoLike/cocoa)
 reports **50.8 seconds** for this project on an Apple M2 Pro with
-eight OpenMP threads (mean of three sequential CLI runs, 2026-10-07).
+eight OpenMP threads (mean of three sequential CLI runs).
 
 This interval includes first-use CosmoLike tables, spectra, halo
 calculations, transforms and complete G + SSC + cNG matrix assembly.
@@ -162,7 +163,9 @@ We assume Cocoa and the DES Y3 project are installed, users have run
 
 The notebook starts with `boosts = [1]` and `spaces = ["real"]`.
 It computes the native matrix, applies the selected dataset's mask, reports
-positivity and plots the computed components and supplied total. Set
+positivity and plots the computed components and supplied total. It then reads
+the eigenvalues of every component and bounds the forecast-to-supplied variance
+ratio over all linear combinations of the retained entries. Set
 `boosts = [1, 2]` to add the numerical-refinement comparison.
 
 The **See the 1h, 2h, 3h and 4h matter trispectra** section can be run
@@ -271,8 +274,10 @@ plots and variance-ratio table.
 
 | Figure | What it teaches |
 | --- | --- |
-| Split-triangle correlation matrix | Compare the generated native-space covariance in the lower triangle with the supplied likelihood covariance in the upper triangle, after the same cuts. Each uses its own diagonal normalization. |
+| Split-triangle correlation matrix | Compare the generated native-space covariance, drawn above the diagonal, with the supplied likelihood covariance, drawn below it, after the same cuts. Index 0 sits at the bottom left, so the title's "Lower" and "Upper" name matrix triangles (row > column and row < column), not screen positions. Each uses its own diagonal normalization. |
 | G, SSC and cNG maps and histograms | Compare each component after normalization by the total diagonal variances. |
+| Correlation eigenvalues | Sort the eigenvalues of the computed and supplied totals after the same cuts; the smallest modes are the ones an inverse amplifies most. |
+| Element-ratio maps | Divide each component by the total entry by entry; entries with weak total correlation are grey and left out of the histogram. |
 | Halo trispectrum diagonal | See 1h, combined 2h, 3h, 4h and their sum at a chosen redshift, before survey projection. The signed axis retains negative terms. |
 | Error changes | With multiple boosts, compare first-source-bin standard deviations with the highest tested boost, in percent, for the native measurement. |
 | Generalized-mode report | Bound variance changes over every linear combination of measurements. |
@@ -396,7 +401,9 @@ The [DES Y3 covariance analysis](https://arxiv.org/abs/2012.08568)
 explains why catalog weights and footprint geometry matter; the cap is
 an approximation to that footprint.
 Lens densities use the same file's redMaGiC NGAL headers.
-The bias values are the lens-prior reference means in this project.
+The bias values are the centers (`loc`) of the `DES_B1_*` `ref` distributions
+in `likelihood/params_lens.yaml`, from which Cobaya draws MCMC starting points;
+the priors themselves are flat between 0.8 and 3.
 
 The angular bins follow the project, with five redMaGiC lens and four
 source bins. All measured galaxy–shear pairs are retained. Fourier bands
@@ -496,7 +503,7 @@ The C routines use OpenMP inside one process and never start MPI work.
 A future Python dispatcher can distribute those subblocks while keeping
 all cross correlations in the assembled matrix.
 
-## Choosing the Gaussian spectra
+## Choosing the Gaussian spectra <a name="gaussian-spectra"></a>
 
 The `gaussian` block selects the physics used in Gaussian covariance.
 `nonlimber: true` retains radial mode coupling for every galaxy–galaxy and

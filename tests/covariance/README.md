@@ -30,12 +30,14 @@ shell is Bash and the current folder is `cocoa/Cocoa`.
 | Check | Purpose |
 | --- | --- |
 | Project layout | Verify the full angular and Fourier vector lengths from the measured row map. |
-| Accuracy refinement | Keep measurement bins fixed while increasing quadrature resolution. |
+| Accuracy refinement | Keep measurement bins fixed while refining the tables (`accuracy_boost: 2`, with the 96-node quadrature unchanged) and the quadrature (`integration_accuracy: 1`, 128 nodes). |
 | Real-space components | Check finite, symmetric G, SSC, cNG and total matrices for a measured subset. |
 | Fourier components | Check the same properties for bandpowers. |
+| Component sum | Check that the total equals G + SSC + cNG to a relative 2e-15. |
+| Production backend | Check that the production (CLI) backend reproduces the notebook-wrapper matrices bitwise. |
 | Thread repeatability | Compare every component bitwise with one and eight OpenMP threads. |
 | Positive total | Check variance positivity for every direction of the tested subset. |
-| Output archive | Read arrays and resolved survey metadata without pickle. |
+| Output archive | Reload the saved total and row map without pickle and check the resolved survey metadata. |
 
 The [shared component tests](https://github.com/CosmoLike/cocoa_lsst_y1/blob/main/tests/covariance/README.md)
 contain independent algebra and projection references. This project check

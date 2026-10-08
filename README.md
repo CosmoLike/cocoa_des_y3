@@ -1,13 +1,14 @@
 # Table of contents <a name="table_of_contents"></a>
 
 1. [Running Cosmolike projects (Basic instructions)](#des_y3_running_cosmolike_projects)
-2. [Baryonic feedback on EXAMPLE_EVALUATE1](#des_y3_baryonic_feedback)
-3. [Running Hybrid Cosmolike-ML emulators](#cobaya_base_code_examples_emul2)
-4. [Unit tests](#des_y3_unit_tests)
-5. [Minimum accuracy parameters](#des_y3_minimum_accuracy)
-6. [Computing covariances](#computing_covariances)
+2. [Plotting the example chains](#des_y3_plotting_chains)
+3. [Baryonic feedback from the bfmt theory block](#des_y3_baryonic_feedback)
+4. [Running Hybrid Cosmolike-ML emulators](#cobaya_base_code_examples_emul2)
+5. [Unit tests](#des_y3_unit_tests)
+6. [Minimum accuracy parameters](#des_y3_minimum_accuracy)
 7. [Exploring notebooks](#notebooks)
-8. [Appendix: Which accuracy settings are available?](#accuracy)
+8. [Computing covariances](#computing_covariances)
+9. [Appendix: Which accuracy settings are available?](#accuracy)
 
 ## Running Cosmolike projects (Basic instructions) <a name="des_y3_running_cosmolike_projects"></a> 
 
@@ -27,7 +28,7 @@
 From `Cocoa/Readme` instructions:
 
 > [!Note]
-> We provide several cosmolike projects that can be loaded and compiled using `setup_cocoa.sh` and `compile_cocoa.sh` scripts. To activate them, comment the following lines on `set_installation_options.sh` 
+> Cocoa provides several cosmolike projects that can be loaded and compiled using `setup_cocoa.sh` and `compile_cocoa.sh` scripts. To activate them, comment the following lines on `set_installation_options.sh` 
 > 
 >     [Adapted from Cocoa/set_installation_options.sh shell script]
 >     (...)
@@ -51,7 +52,7 @@ From `Cocoa/Readme` instructions:
 >     #If none is set, Cocoa loads the latest commit on the repository default branch.
 >     #export DES_Y3_GIT_BRANCH="main"
 >     #export DES_Y3_GIT_COMMIT="abc"
->     export DES_Y3_GIT_TAG="v4.10.4"
+>     export DES_Y3_GIT_TAG="v5.05"
 
 > [!NOTE]
 > In case users need to rerun `setup_cocoa.sh`, Cocoa will not download previously installed packages, cosmolike projects, or large datasets, unless the following keys are set on `set_installation_options.sh`
@@ -125,7 +126,7 @@ and
 
       source start_cocoa.sh
 
-**Step :two:**: Select the number of OpenMP cores (below, we set it to 8).
+**Step :two:**: Select the number of OpenMP cores (8 below).
 
   - Linux
     
@@ -189,11 +190,60 @@ The likelihoods of the examples, the parameter files they include, and the param
 > `-fno-signed-zeros`, or `-fno-trapping-math` in CosmoLike builds.
 > This does not change Cocoa's separate `--aggressive` download option.
 
-# Baryonic feedback on EXAMPLE_EVALUATE1 <a name="des_y3_baryonic_feedback"></a>
+## Plotting the example chains <a name="des_y3_plotting_chains"></a>
+
+The scripts in `plots/` draw GetDist triangle plots, each comparing two chains.
+They read the chains from `projects/des_y3/chains/`, discard the first half of
+each chain as burn-in, add $S_8=\sigma_8(\Omega_m/0.3)^{0.5}$, and write
+`plotN.pdf` into the folder they run in.
+
+| Script | Chains compared | Parameters shown |
+|---|---|---|
+| `plot1.py` | `EXAMPLE_MCMC3` (DES-Y1 cosmic shear) and `EXAMPLE_MCMC1` (DES-Y3 cosmic shear) | Cosmological |
+| `plot2.py` | `EXAMPLE_MCMC1` (DES-Y3 cosmic shear) and `EXAMPLE_MCMC2` (DES-Y3 3x2pt) | Cosmological |
+| `plot3.py` | `EXAMPLE_MCMC1` and `EXAMPLE_MCMC2` | Intrinsic-alignment amplitudes with $\Omega_m$, $\sigma_8$, $w$, $w_a$ |
+| `plot4.py` | `EXAMPLE_MCMC3` (DES-Y1 cosmic shear) and `EXAMPLE_MCMC4` (DES-Y1 3x2pt) | Cosmological |
+| `plot5.py` | `EXAMPLE_MCMC3` and `EXAMPLE_MCMC4` | Intrinsic-alignment amplitudes with $\Omega_m$, $\sigma_8$, $w$, $w_a$ |
+
+Only `EXAMPLE_MCMC1.yaml` and `EXAMPLE_MCMC2.yaml` ship with the project. The
+DES-Y1 chains come from the same two files with `data_file: des_y1_real.dataset`
+and the output renamed to `EXAMPLE_MCMC3` and `EXAMPLE_MCMC4`.
+
+```mermaid
+flowchart TD
+  A["EXAMPLE_MCMC1.yaml: DES-Y3 cosmic shear"] --> C["plot2.py, plot3.py: Y3 shear vs Y3 3x2pt"]
+  B["EXAMPLE_MCMC2.yaml: DES-Y3 3x2pt"] --> C
+  A --> D["plot1.py: Y1 shear vs Y3 shear"]
+  E["EXAMPLE_MCMC3: MCMC1 on des_y1_real.dataset"] --> D
+  E --> F["plot4.py, plot5.py: Y1 shear vs Y1 3x2pt"]
+  G["EXAMPLE_MCMC4: MCMC2 on des_y1_real.dataset"] --> F
+```
+
+We assume users are in the Conda cocoa environment, that the shell is bash,
+that the current folder is `cocoa/Cocoa`, and that the chains exist.
+
+**Step :one:**: activate Cocoa.
+
+      source start_cocoa.sh
+
+**Step :two:**: enter the plots folder; the scripts read `../chains/` relative to it.
+
+      cd ./projects/des_y3/plots
+
+**Step :three:**: draw the DES-Y3 comparison.
+
+      python plot2.py
+
+`plot_all.sh` runs `plot1.py`, `plot2.py` and `plot3.py` with their printed
+output discarded.
+
+# Baryonic feedback from the bfmt theory block <a name="des_y3_baryonic_feedback"></a>
 
 `EXAMPLE_EVALUATE1.yaml` can apply an external baryonic feedback suppression to the
 matter power spectrum via the `bfmt` theory block (SP(k), BCEmu, Flamingo, BACCOemu,
-or BCemu2025). By default, the example runs without feedback.
+or BCemu2025). By default, the example runs without feedback. The 3×2pt notebook
+compares the block's models in [its own section](#des_y3_bfmt_study); both need the
+installation of Step :one:.
 
 **Step :one:**: ensure the lines below are commented out in `set_installation_options.sh`
 before running `setup_cocoa.sh` and `compile_cocoa.sh`. *By default, these lines should
@@ -201,7 +251,7 @@ be commented out, but it is worth checking*.
 
       [Adapted from Cocoa/set_installation_options.sh shell script]
       #export IGNORE_PYSPK_CODE=1     # SP(k)
-      #export IGNORE_BCEMU_CODE=1     # BCEmu
+      #export IGNORE_BCEMU_CODE=1     # BCEmu and BCemu2025
       #export IGNORE_FBRE_CODE=1      # FlamingoBaryonResponseEmulator
       #export IGNORE_BACCOEMU_CODE=1  # BACCOemu
       #export IGNORE_BFMT_CODE=1      # Baryon Feedback Theory Block
@@ -223,6 +273,33 @@ model).
 > [!TIP]
 > For the sampled parameters of each model, their validity ranges, and the `bfmt`
 > options, see `Cocoa/external_modules/code/baryon_suppression/README.md`.
+
+## The bfmt study in EXAMPLE_EVALUATE2.ipynb <a name="des_y3_bfmt_study"></a>
+
+The notebook section *Baryonic feedback from the `bfmt` theory block* evaluates
+the block through a minimal Cobaya model (CAMB, `bfmt` and the `one` likelihood),
+so it needs the installation of Step :one: but none of the YAML edits. It runs
+six methods at fixed parameter points: the three SP(k) relations, BCEmu, Flamingo
+and BCemu2025. BACCOemu stays commented out: its `omega_baryon` training range
+starts at 0.04001, above the notebook's `omegab = 0.04`. Each suppression
+$S(k,z)$ multiplies the nonlinear matter power, as `external_baryon_suppression: True`
+does in the likelihood, and two figures draw $C_\ell^{gs}$ and $\gamma_t(\theta)$
+relative to no feedback. The section runs CAMB 13 times.
+
+Its table covers the 533 entries of the baseline 3×2pt mask:
+
+| Column | Meaning |
+|---|---|
+| $\chi^2$ | Against the measured DES Y3 data vector. |
+| $\Delta\chi^2$ | $\chi^2$ minus the no-feedback $\chi^2$, of either sign. |
+| $\chi^2$ of the shift | $(t-t_{\rm none})^{\mathsf T}C^{-1}(t-t_{\rm none})$: the change of the prediction $t$ in units of the DES Y3 errors, independent of the data. |
+
+In the executed notebook, the no-feedback $\chi^2 = 1369.0618$, and the $\chi^2$
+of the shift stays below one for every method, from 0.0165 (BCemu2025) to 0.8075
+(SP(k) power law): the baseline scale cuts keep these feedback strengths below
+the DES Y3 errors. $\Delta\chi^2$ reaches $-12.3832$ (SP(k) power law) because the
+fiducial point is not a fit to the measurements, so a small shift can still move
+the prediction toward the data.
 
 # Running Hybrid Cosmolike-ML emulators <a name="cobaya_base_code_examples_emul2"></a>
 
@@ -282,7 +359,9 @@ BLAS limits before importing numerical libraries.
 | Nautilus sampling | [EXAMPLE_EMUL2_NAUTILUS1.py](EXAMPLE_EMUL2_NAUTILUS1.py) | [EXAMPLE_EMUL2_NAUTILUS2.py](EXAMPLE_EMUL2_NAUTILUS2.py) |
 
 Configuration **1** uses `des_y3.cosmic_shear`, TATT, and `des_y3_real.dataset`.
-Configuration **2** uses `des_y3.combo_3x2pt`, NLA, and `des_y3_real.dataset`.
+Configuration **2** uses `des_y3.combo_3x2pt` and `des_y3_real.dataset`, with NLA
+in `EXAMPLE_EMUL2_EVALUATE2.yaml` (and the scripts that read it) but TATT in
+`EXAMPLE_EMUL2_MCMC2.yaml`.
 
 The minimization, profile and Nautilus scripts read the corresponding
 `EXAMPLE_EMUL2_EVALUATE1.yaml` or `2.yaml`; `--input` selects another evaluate
@@ -360,11 +439,11 @@ accuracy or posterior convergence.
 Details on the matter power spectrum emulator designs will be presented in the
 [emulator_code](https://github.com/SBU-COSMOLIKE/emulators_code) repository.
 
-Basically, we apply standard neural network techniques to generalize
+The networks apply standard neural network techniques to generalize
 the *syren-new* Eq. 6 of [arXiv:2410.14623](https://arxiv.org/abs/2410.14623)
 formula for the linear power spectrum (w0waCDM with a fixed neutrino mass of $0.06$ eV)
 to new models, extended ranges, or higher precision.
-Similarly, we use networks to generalize the *syren-Halofit* LCDM nonlinear
+Similar networks generalize the *syren-Halofit* LCDM nonlinear
 boost fit (Eq. 11 of [arXiv:2402.17492](https://arxiv.org/abs/2402.17492)).
 
 
@@ -462,13 +541,15 @@ supply the hosts and slots with the cluster's `--hostfile` or `--host` recipe.
 
 # Unit tests <a name="des_y3_unit_tests"></a>
 
-The `tests/` folder holds unit tests for the likelihoods of this
-project: they compare each likelihood against stored reference
-values, check for race conditions from OpenMP threading, and measure
-the numerical error of the default accuracy settings. The
-tests read nothing from the live project;
-[tests/README.md](tests/README.md) describes every test, the tests'
-own data snapshot, and how to refresh it.
+The `tests/` folder holds two sectors. The data-vector sector compares
+each likelihood against stored reference values, checks for race
+conditions from OpenMP threading, and measures the numerical error of
+the default accuracy settings; it reads no live data or example files.
+The covariance sector checks the forecast assembly and needs the
+optional covariance build. [tests/README.md](tests/README.md) shows how
+to run both sectors, and [tests/data_vector/README.md](tests/data_vector/README.md)
+describes every data-vector test, the tests' own data snapshot, and
+how to refresh it.
 
 We assume users are in the Conda cocoa environment from a previous
 `conda activate cocoa` command, that the shell is bash, and that the
@@ -496,9 +577,9 @@ the default evaluations, to compare against the 0.2 band the
 reference tests allow.
 
 No measured values are quoted here: rerun the checks to measure
-them on the current code, and see
-[tests/README.md](tests/README.md) for each check, the settings
-raised, and what each setting controls.
+them on the current code, and see the
+[accuracy checks](tests/data_vector/README.md#accuracy_checks) for each
+check, the settings raised, and what each setting controls.
 
 # Exploring notebooks <a name="notebooks"></a>
 
@@ -538,9 +619,23 @@ jupyter notebook --no-browser --port=8888
 
 | Notebook | Contents |
 |---|---|
-| [EXAMPLE_EVALUATE1.ipynb](EXAMPLE_EVALUATE1.ipynb) | Data-vector exploration through the project wrappers; inspect the setup cells before running. |
-| [EXAMPLE_EVALUATE2.ipynb](EXAMPLE_EVALUATE2.ipynb) | Data-vector exploration through the project wrappers; inspect the setup cells before running. |
-| [EXAMPLE_EVALUATE_COVARIANCE.ipynb](EXAMPLE_EVALUATE_COVARIANCE.ipynb) | G, SSC, cNG, total, separate 1h–4h matter trispectra and matrix diagnostics. |
+| [EXAMPLE_EVALUATE1.ipynb](EXAMPLE_EVALUATE1.ipynb) | Cosmic shear, $C_\ell^{EE}$ and $\xi_\pm(\theta)$, through wrapper functions defined in the notebook: parameter and binning changes, tabulated-simulation feedback, `AccuracyBoost`, and $\chi^2$ against the DES Y3 cosmic-shear data (227 entries) with quadrature and interpolation checks. |
+| [EXAMPLE_EVALUATE2.ipynb](EXAMPLE_EVALUATE2.ipynb) | 3×2pt: $C_\ell^{gs}$, $\gamma_t(\theta)$, $C_\ell^{gg}$ with and without the Limber approximation, and $w(\theta)$; tabulated-simulation feedback; the [bfmt feedback study](#des_y3_bfmt_study), which needs the `bfmt` installation; `AccuracyBoost`; and $\chi^2$ against the DES Y3 3×2pt data (533 entries) with quadrature and interpolation checks. |
+| [EXAMPLE_EVALUATE_COVARIANCE.ipynb](EXAMPLE_EVALUATE_COVARIANCE.ipynb) | G, SSC, cNG, total, separate 1h–4h matter trispectra and matrix diagnostics, compared with the supplied DES Y3 covariance after the same mask. |
+
+Read `EXAMPLE_EVALUATE1.ipynb` first: it defines the vocabulary, the five stages
+of one evaluation and the wrappers that `EXAMPLE_EVALUATE2.ipynb` extends to the
+lens galaxies.
+
+```mermaid
+flowchart TD
+  A["EXAMPLE_EVALUATE1.ipynb: cosmic shear, stages and wrappers"] --> B["EXAMPLE_EVALUATE2.ipynb: 3x2pt, Limber choices, bfmt study"]
+  C["data/des_y3_real.dataset: DES Y3 data, covariance and mask"] --> A
+  C --> B
+  C --> D["EXAMPLE_EVALUATE_COVARIANCE.ipynb: G, SSC and cNG forecast"]
+  E["bfmt block and its emulators"] --> B
+  F["Optional covariance build"] --> D
+```
 
 Choose the Python kernel from the activated Cocoa environment and restart it
 after recompiling. The [covariance guide](covariance/README.md) explains the
