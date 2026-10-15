@@ -12,19 +12,6 @@
 
 ## Running Cosmolike projects (Basic instructions) <a name="des_y3_running_cosmolike_projects"></a> 
 
-> [!WARNING]
-> **CLI for production; notebook wrappers for exploration.**
->
-> Run production and HPC calculations from YAML through the optimized
-> `_interface` bindings. Notebook `_wrapper` APIs expose intermediate
-> quantities for exploration; copying and rearranging their arrays adds
-> overhead. Both routes call the same C kernels.
->
-> In a matched **LSST Y1 covariance** test on an M2 Pro with eight threads,
-> the CLI averaged **50.23 s** (three runs); one wrapper run took **173.38 s**.
-> The CLI was **3.45× faster**, with bitwise-identical covariance components.
-> See [the production covariance CLI](#computing_covariances).
-
 From `Cocoa/Readme` instructions:
 
 > [!Note]
@@ -179,16 +166,6 @@ and
 
 The likelihoods of the examples, the parameter files they include, and the parameters each likelihood fixes or must not vary are described in [likelihood/README.md](likelihood/README.md).
 
-
-> [!Warning]
-> CosmoLike supports the optimized strict-IEEE default build and
-> `COSMOLIKE_DEBUG_MODE`. The compiler mode `COSMOLIKE_AGGRESSIVE_MODE`
-> is retired because its fast-math configuration produced incorrect
-> covariance inverses. Unset that variable before compiling.
-> Do not enable `-ffast-math`, `-Ofast`, `-funsafe-math-optimizations`,
-> `-fassociative-math`, `-ffinite-math-only`, `-freciprocal-math`,
-> `-fno-signed-zeros`, or `-fno-trapping-math` in CosmoLike builds.
-> This does not change Cocoa's separate `--aggressive` download option.
 
 ## Plotting the example chains <a name="des_y3_plotting_chains"></a>
 
@@ -698,6 +675,17 @@ forecast files, figures and refinement workflow.
 
 
 # Computing covariances <a name="computing_covariances"></a>
+
+> [!WARNING]
+> **CLI for production; notebook wrappers for exploration.**
+>
+> Run production and HPC covariance calculations from YAML through the
+> `_interface` bindings. Notebook `_wrapper` APIs expose intermediate
+> quantities for exploration; copying and rearranging their arrays adds
+> overhead. Both routes call the same C kernels.
+>
+> For timing measurements, see
+> [Cocoa's main README](https://github.com/CosmoLike/cocoa#overview).
 
 The production CLI saves G, SSC, cNG and total before scale cuts. It reads
 [the covariance evaluate YAML](EXAMPLE_EVALUATE_COVARIANCE.yaml) and calls the shared C kernels.
