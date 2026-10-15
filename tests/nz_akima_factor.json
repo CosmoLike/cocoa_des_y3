@@ -160,7 +160,8 @@
     "numerical_delta_chi2": {
       "three": 2.1674325848237206e-05,
       "five": 2.2700798515585786e-05,
-      "seven": 0.0004204840707575303
+      "seven": 0.0004204840707575303,
+      "original": 5.2477573526836634e-06
     },
     "pairwise": {
       "three_to_five": {
@@ -177,6 +178,11 @@
         "raised_delta_chi2": 0.009328421827350653,
         "reference_delta_chi2": 0.008427676975390538,
         "displacement_error_delta_chi2": 0.0003767223197813942
+      },
+      "original_to_three": {
+        "raised_delta_chi2": 0.1847933252253818,
+        "reference_delta_chi2": 0.18415659921735883,
+        "displacement_error_delta_chi2": 1.8497113074621416e-05
       }
     },
     "tests": {
@@ -190,6 +196,12 @@
     "vector_sha256": {
       "5": "81a4e309c52a04cec2965e7f7e296b67ae20b27e8a3498389947f0dc023795ec",
       "7": "8391d6b75516da61fa6a9b7557736df0e9880e9635ee23c9546d47d7bfcc5483"
+    },
+    "original_vector_source": {
+      "project": "des_y3",
+      "level": 4,
+      "status": "passed",
+      "returncode": 0
     }
   }
 }
