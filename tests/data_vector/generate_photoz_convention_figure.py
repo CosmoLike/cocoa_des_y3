@@ -16,11 +16,11 @@ because the two knobs live on different scales:
     photoz_interp_dxi.png - linear and Steffen vs cubic spline
                             (1e-4 level).
 
-Both PNG files are written next to this script, in tests/, replacing
+Both PNG files are written next to this script, in tests/data_vector/, replacing
 the committed ones. To run (from the Cocoa/ folder, cocoa environment
 active, start_cocoa.sh sourced):
 
-    python ./projects/des_y3/tests/generate_photoz_convention_figure.py
+    python ./projects/des_y3/tests/data_vector/generate_photoz_convention_figure.py
 """
 
 import os
@@ -41,9 +41,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-# tests/ is not a package; put it first on sys.path, the list of
-# folders Python searches on import.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Figures belong beside these data-vector checks. The shared harness and
+# frozen inputs remain one folder above, in tests/. Resolve both from
+# this script so it can be launched from any working directory.
+FIGURES = os.path.dirname(os.path.abspath(__file__))
+TESTS = os.path.dirname(FIGURES)
+sys.path.insert(0, TESTS)
 import cocoa_test_utils as u
 
 # example1 is the DES-Y3 cosmic-shear configuration. Its data set has 4
@@ -54,7 +57,7 @@ EXAMPLE = "example1"
 NTOMO = 4
 NTHETA = 20
 THETA_MIN, THETA_MAX = 2.5, 250.0
-MASK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+MASK_FILE = os.path.join(TESTS,
                          "frozen", "data",
                          "3x2pt_baseline.mask")
 
@@ -151,7 +154,7 @@ def plot(curves, fname, title, scale=100.0, unit="%", ylim=None):
         axes.ravel()[0].set_ylim(-ylim, ylim)
     axes.ravel()[0].legend(fontsize=9, loc="lower left")
     fig.suptitle(title, fontsize=17)
-    fig.savefig(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+    fig.savefig(os.path.join(FIGURES,
                              fname), dpi=120, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {fname}")
