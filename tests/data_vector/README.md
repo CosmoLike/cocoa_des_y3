@@ -107,14 +107,14 @@ configurations and test numbers:
 
 | file | data | configuration | tests |
 |---|---|---|---|
-| `test_example1.py` | DES-Y3 | cosmic shear | 1-4: drift and race, in NLA then TATT |
-| `test_example2.py` | DES-Y3 | 3x2pt | 5-8: drift and race, in NLA then TATT |
-| `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`) | 11-14: drift and race, in NLA then TATT |
-| `test_example3.py` | DES-Y1 | cosmic shear | 15-18: drift and race, in NLA then TATT |
-| `test_example4.py` | DES-Y1 | 3x2pt | 19-22: drift and race, in NLA then TATT |
-| `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`) | 23-26: drift and race, in NLA then TATT |
-| `test_fastpt.py` | DES-Y3 | the sweep on cosmic shear, the 3x2pt likelihood (`des_y3.combo_3x2pt`) and the 2x2pt likelihood (`des_y3.combo_2x2pt`) | 27, 28, 29 |
-| `test_ee2.py` | DES-Y3 | cosmic shear, NLA with EE2 (`non_linear_emul: 1`) | 30: race, including EE2's own threaded compute |
+| `test_example1.py` | DES-Y3 | cosmic shear | 1-4 |
+| `test_example2.py` | DES-Y3 | 3x2pt | 5-8 |
+| `test_example2_2x2pt.py` | DES-Y3 | 2x2pt (`des_y3.combo_2x2pt`) | 11-14 |
+| `test_example3.py` | DES-Y1 | cosmic shear | 15-18 |
+| `test_example4.py` | DES-Y1 | 3x2pt | 19-22 |
+| `test_example4_2x2pt.py` | DES-Y1 | 2x2pt (`des_y3.combo_2x2pt`) | 23-26 |
+| `test_fastpt.py` | DES-Y3 | the sweep: shear; 3x2pt (`des_y3.combo_3x2pt`); 2x2pt (`des_y3.combo_2x2pt`) | 27, 28, 29 |
+| `test_ee2.py` | DES-Y3 | race | 30 |
 
 Tests 9 and 10 are not used: the numbering follows the shared
 convention, where they are the frozen FAST-PT reference checks
